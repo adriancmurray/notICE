@@ -73,7 +73,7 @@ class Report {
       description: record.getStringValue('description'),
       lat: record.getDoubleValue('lat'),
       long: record.getDoubleValue('long'),
-      created: DateTime.tryParse(record.created) ?? DateTime.now(),
+      created: DateTime.tryParse(record.getStringValue('created')) ?? DateTime.now(),
     );
   }
 

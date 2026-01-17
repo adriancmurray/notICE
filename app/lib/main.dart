@@ -22,7 +22,7 @@ class NoticeApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
         scaffoldBackgroundColor: const Color(0xFF0A1929),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: const Color(0xFF132F4C),
           elevation: 8,
           shape: RoundedRectangleBorder(
