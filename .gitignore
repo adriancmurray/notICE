@@ -1,0 +1,34 @@
+# PocketBase
+pb_data/
+pocketbase
+pocketbase.exe
+
+# Environment
+.env
+.env.local
+
+# Flutter/Dart
+app/.dart_tool/
+app/.packages
+app/.pub-cache/
+app/.pub/
+app/build/
+app/*.iml
+app/.idea/
+app/.vscode/
+app/*.log
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Secrets (never commit!)
+**/secrets/
+*.pem
+*.key

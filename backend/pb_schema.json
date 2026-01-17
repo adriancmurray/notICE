@@ -1,0 +1,69 @@
+[
+    {
+        "name": "reports",
+        "type": "base",
+        "schema": [
+            {
+                "name": "geohash",
+                "type": "text",
+                "required": true,
+                "options": {
+                    "min": 6,
+                    "max": 12,
+                    "pattern": "^[0-9bcdefghjkmnpqrstuvwxyz]+$"
+                }
+            },
+            {
+                "name": "type",
+                "type": "select",
+                "required": true,
+                "options": {
+                    "maxSelect": 1,
+                    "values": [
+                        "danger",
+                        "warning",
+                        "safe"
+                    ]
+                }
+            },
+            {
+                "name": "description",
+                "type": "text",
+                "required": false,
+                "options": {
+                    "min": null,
+                    "max": 500,
+                    "pattern": ""
+                }
+            },
+            {
+                "name": "lat",
+                "type": "number",
+                "required": true,
+                "options": {
+                    "min": -90,
+                    "max": 90
+                }
+            },
+            {
+                "name": "long",
+                "type": "number",
+                "required": true,
+                "options": {
+                    "min": -180,
+                    "max": 180
+                }
+            }
+        ],
+        "indexes": [
+            "CREATE INDEX idx_reports_geohash ON reports (geohash)",
+            "CREATE INDEX idx_reports_type ON reports (type)",
+            "CREATE INDEX idx_reports_created ON reports (created DESC)"
+        ],
+        "listRule": "",
+        "viewRule": "",
+        "createRule": "",
+        "updateRule": null,
+        "deleteRule": null
+    }
+]
