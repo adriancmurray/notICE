@@ -66,23 +66,62 @@ if [ "$SETUP_TELEGRAM" = "y" ] || [ "$SETUP_TELEGRAM" = "Y" ]; then
 fi
 
 echo ""
+echo "🌐 Public Access"
+echo "----------------"
+echo "How should the server be accessible?"
+echo ""
+echo "  1) Local only (http://localhost:8090)"
+echo "     - Good for testing"
+echo ""
+echo "  2) Public via Cloudflare Tunnel (free HTTPS URL)"
+echo "     - No port forwarding needed"
+echo "     - Free public URL with HTTPS"
+echo "     - Share with anyone instantly"
+echo ""
+read -p "Choose access mode [1/2]: " ACCESS_MODE
+
+echo ""
 echo "🚀 Starting notICE server..."
 echo ""
 
-# Start the server
-docker compose up -d
+if [ "$ACCESS_MODE" = "2" ]; then
+    # Start with Cloudflare tunnel
+    docker compose --profile public up -d
+    
+    echo ""
+    echo "⏳ Waiting for Cloudflare tunnel..."
+    sleep 5
+    
+    # Get the tunnel URL from logs
+    TUNNEL_URL=$(docker compose logs tunnel 2>&1 | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | head -1)
+    
+    echo ""
+    echo "✅ notICE server is running!"
+    echo ""
+    if [ -n "$TUNNEL_URL" ]; then
+        echo "🌍 PUBLIC URL: $TUNNEL_URL"
+        echo ""
+        echo "Share this link with your community!"
+        echo "They can open it in a browser and 'Add to Home Screen' for the full app."
+    else
+        echo "📊 Tunnel starting... check logs with: docker compose logs tunnel"
+    fi
+else
+    # Start local only
+    docker compose up -d
+    
+    echo ""
+    echo "✅ notICE server is running!"
+    echo ""
+    echo "📊 Admin Dashboard: http://localhost:8090/_/"
+    echo "🌐 App: http://localhost:8090/"
+fi
 
 echo ""
-echo "✅ notICE server is running!"
-echo ""
 echo "📊 Admin Dashboard: http://localhost:8090/_/"
-echo "🌐 API: http://localhost:8090/api/"
 echo ""
-echo "Next steps:"
-echo "1. Open http://localhost:8090/_/ to create an admin account"
-echo "2. Go to Collections → config and verify the region settings"
-echo "3. Share the PWA link with your community"
-echo ""
-echo "To stop the server: docker compose down"
-echo "To view logs: docker compose logs -f"
+echo "Commands:"
+echo "  docker compose logs -f        # View logs"
+echo "  docker compose down           # Stop server"
+echo "  docker compose --profile public up -d  # Add public access"
 echo ""
