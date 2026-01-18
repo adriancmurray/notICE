@@ -1,88 +1,46 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-/**
- * Telegram notification hook for notICE reports.
- * 
- * Sends an alert to a configured Telegram channel/group when 
- * a new report is created.
- * 
- * Environment variables (set in PocketBase settings or system env):
- * - TELEGRAM_BOT_TOKEN: Bot token from @BotFather
- * - TELEGRAM_CHAT_ID: Target channel/group ID
- * 
- * Updated for PocketBase 0.25+ hooks API.
- */
+// Minimal Telegram hook for PocketBase 0.25
+// Uses onRecordCreateRequest with e.next() first
 
-// Hook: Listen for new reports (PocketBase 0.25+ API)
 onRecordCreateRequest((e) => {
-    // Only trigger after record is created
+    // Let the record be created first
     e.next();
 
-    // Only process reports collection
-    if (e.collection.name !== "reports") {
-        return;
-    }
+    // Only process reports
+    if (e.collection.name !== "reports") return;
 
     const token = $os.getenv("TELEGRAM_BOT_TOKEN");
     const chatId = $os.getenv("TELEGRAM_CHAT_ID");
 
-    // Skip if not configured
     if (!token || !chatId) {
-        console.log("Telegram not configured, skipping notification");
+        console.log("Telegram not configured");
         return;
     }
 
     try {
-        // Report type to emoji/label mapping
-        const TYPE_EMOJI = {
-            danger: "🚨",
-            warning: "⚠️",
-            safe: "✅"
-        };
-        const TYPE_LABEL = {
-            danger: "DANGER",
-            warning: "Warning",
-            safe: "All Clear"
-        };
-
-        // Format message
-        const reportType = e.record.get("type");
-        const emoji = TYPE_EMOJI[reportType] || "📍";
-        const label = TYPE_LABEL[reportType] || reportType;
-        const description = e.record.get("description") || "No description provided";
-        const geohash = e.record.get("geohash");
+        const type = e.record.get("type") || "report";
+        const desc = e.record.get("description") || "";
         const lat = e.record.get("lat");
         const long = e.record.get("long");
 
-        const mapLink = "https://www.openstreetmap.org/?mlat=" + lat + "&mlon=" + long + "#map=17/" + lat + "/" + long;
+        const emoji = type === "danger" ? "🚨" : type === "warning" ? "⚠️" : "✅";
+        const mapUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${long}#map=17/${lat}/${long}`;
+        const msg = `${emoji} *${type.toUpperCase()}*\n${desc}\n\n[📍 View Map](${mapUrl})`;
 
-        const message = emoji + " *" + label + "*\n\n📝 " + description + "\n\n📍 [View Location](" + mapLink + ")\n🗺️ Geohash: `" + geohash + "`\n⏰ " + new Date().toISOString();
-
-        // Send to Telegram
-        const url = "https://api.telegram.org/bot" + token + "/sendMessage";
-
-        const response = $http.send({
-            url: url,
+        $http.send({
+            url: `https://api.telegram.org/bot${token}/sendMessage`,
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 chat_id: chatId,
-                text: message,
-                parse_mode: "Markdown",
-                disable_web_page_preview: true
+                text: msg,
+                parse_mode: "Markdown"
             }),
             timeout: 10
         });
-
-        if (response.statusCode !== 200) {
-            console.log("Telegram API error:", response.raw);
-        } else {
-            console.log("Telegram notification sent for report " + e.record.id);
-        }
+        console.log("Telegram sent for", e.record.id);
     } catch (err) {
-        // Log but don't block the request
-        console.log("Failed to send Telegram notification:", err.message);
+        console.log("Telegram error:", err);
     }
 });

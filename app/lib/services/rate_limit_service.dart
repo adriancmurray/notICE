@@ -19,16 +19,20 @@ class RateLimitService {
   /// Check if the user can submit a new report.
   /// 
   /// Returns true if cooldown has passed, false otherwise.
+  /// 
+  /// NOTE: Client-side disabled for testing. Server-side still enforces limit.
   Future<bool> canSubmitReport() async {
-    await _ensureInitialized();
+    // TESTING: Disabled client-side rate limiting
+    // Server-side rate limiting is still active via rate_limit.pb.js
+    return true;
     
-    final lastTimestamp = _prefs!.getInt(_lastReportKey);
-    if (lastTimestamp == null) return true;
-    
-    final lastReport = DateTime.fromMillisecondsSinceEpoch(lastTimestamp);
-    final elapsed = DateTime.now().difference(lastReport);
-    
-    return elapsed >= _cooldownDuration;
+    // Original implementation:
+    // await _ensureInitialized();
+    // final lastTimestamp = _prefs!.getInt(_lastReportKey);
+    // if (lastTimestamp == null) return true;
+    // final lastReport = DateTime.fromMillisecondsSinceEpoch(lastTimestamp);
+    // final elapsed = DateTime.now().difference(lastReport);
+    // return elapsed >= _cooldownDuration;
   }
 
   /// Get the remaining cooldown time.
