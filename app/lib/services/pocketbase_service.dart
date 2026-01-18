@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:app/config/app_config.dart';
 import 'package:app/models/report.dart';
+import 'package:app/services/device_fingerprint_service.dart';
 import 'package:app/services/geohash_service.dart';
 import 'package:app/services/vote_tracking_service.dart';
 
@@ -148,6 +149,9 @@ class PocketbaseService {
     String? description,
   }) async {
     final geohash = _geohashService.encode(lat, long);
+    
+    // Get device fingerprint for server-side rate limiting
+    final fingerprint = await DeviceFingerprintService.instance.getFingerprint();
 
     final record = await _pb.collection('reports').create(
       body: {
@@ -156,6 +160,9 @@ class PocketbaseService {
         'description': description ?? '',
         'lat': lat,
         'long': long,
+      },
+      headers: {
+        'X-Device-Fingerprint': fingerprint,
       },
     );
 
