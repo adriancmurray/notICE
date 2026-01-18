@@ -47,25 +47,23 @@ class LocationService {
   }
 
   /// Get the current location.
+  /// 
+  /// Throws an exception if permissions are denied.
   Future<LatLng> getCurrentLocation() async {
     final hasPermission = await checkPermissions();
     if (!hasPermission) {
-      return defaultLocation;
+      throw Exception('Location permissions denied');
     }
 
-    try {
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
-        ),
-      );
+    final position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 10),
+      ),
+    );
 
-      _lastLocation = LatLng(position.latitude, position.longitude);
-      return _lastLocation!;
-    } catch (e) {
-      return _lastLocation ?? defaultLocation;
-    }
+    _lastLocation = LatLng(position.latitude, position.longitude);
+    return _lastLocation!;
   }
 
   /// Start listening to location updates.
