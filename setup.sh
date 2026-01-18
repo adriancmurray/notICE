@@ -36,8 +36,8 @@ fi
 echo "📍 Region Configuration"
 echo "-----------------------"
 read -p "Region name (e.g., 'Idaho Falls, ID'): " REGION_NAME
-read -p "Latitude (e.g., 43.4926): " REGION_LAT
-read -p "Longitude (e.g., -112.0401): " REGION_LONG
+read -p "Latitude (e.g., 40.7128): " REGION_LAT
+read -p "Longitude (e.g., -74.0060): " REGION_LONG
 
 # Update .env file
 sed -i.bak "s/REGION_NAME=.*/REGION_NAME=\"$REGION_NAME\"/" .env

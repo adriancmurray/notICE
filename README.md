@@ -165,9 +165,9 @@ cp -r pb_public backend/
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `REGION_NAME` | Your city name | `Idaho Falls, ID` |
-| `REGION_LAT` | Map center latitude | `43.4926` |
-| `REGION_LONG` | Map center longitude | `-112.0401` |
+| `REGION_NAME` | Your city name | `My City, State` |
+| `REGION_LAT` | Map center latitude | `40.7128` |
+| `REGION_LONG` | Map center longitude | `-74.0060` |
 | `REGION_ZOOM` | Default zoom level | `14` |
 | `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather | `123456:ABC-DEF...` |
 | `TELEGRAM_CHAT_ID` | Channel/Group ID | `-1001234567890` |
