@@ -23,7 +23,6 @@ class _ReportFormState extends State<ReportForm> {
   ReportType _selectedType = ReportType.warning;
   final _descriptionController = TextEditingController();
   bool _isSubmitting = false;
-  Duration? _cooldownRemaining;
 
   @override
   void initState() {
@@ -32,10 +31,8 @@ class _ReportFormState extends State<ReportForm> {
   }
 
   Future<void> _checkRateLimit() async {
-    final remaining = await _rateLimitService.getRemainingCooldown();
-    if (remaining > Duration.zero && mounted) {
-      setState(() => _cooldownRemaining = remaining);
-    }
+    // Pre-check rate limit status (could show UI warning in future)
+    await _rateLimitService.getRemainingCooldown();
   }
 
   Future<void> _submit() async {
@@ -44,7 +41,6 @@ class _ReportFormState extends State<ReportForm> {
     if (!canSubmit) {
       final remaining = await _rateLimitService.getRemainingCooldown();
       if (mounted) {
-        setState(() => _cooldownRemaining = remaining);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Please wait ${remaining.inMinutes} minutes before submitting another report'),
