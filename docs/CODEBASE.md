@@ -153,20 +153,27 @@ Prevents vote gaming (1 vote per device per report):
 
 ### 2. PocketBase Hooks (`pb_hooks/`)
 
-#### `telegram.pb.js` (Active)
-Fires on `onRecordCreateRequest` for "reports" collection:
-1. Calls `e.next()` first to save the record
-2. Gets TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID from env
-3. Formats message with emoji, description, map link
-4. POSTs to Telegram Bot API (non-blocking)
+#### `notifications.pb.js` (Modular Notification System)
+Fires on `onRecordCreateRequest` for "reports" collection.
+Supports **multiple providers simultaneously**:
 
-**Required env vars:**
-- `TELEGRAM_BOT_TOKEN` — From @BotFather
-- `TELEGRAM_CHAT_ID` — Channel/group ID (negative number for groups)
+**Telegram:**
+```
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=-1001234567890
+```
 
-#### Other hooks (Templates only)
-- `init.pb.js` — Auto-config from env vars (optional)
-- `migration_verification.pb.js` — Removed (was causing issues)
+**ntfy.sh:**
+```
+NTFY_TOPIC=your-topic-name
+NTFY_SERVER=https://ntfy.sh  # optional, defaults to ntfy.sh
+```
+
+Features:
+- Both can run simultaneously for redundancy
+- Priority levels for ntfy (urgent for danger, high for warning)
+- Click actions to open map location
+- Non-blocking (record saves first via `e.next()`)
 
 ---
 
