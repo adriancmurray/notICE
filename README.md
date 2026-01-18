@@ -12,68 +12,19 @@ Deploy your own notICE server in 60 seconds:
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/notICE?referralCode=notICE)
 
-After deploying, set these environment variables in Railway:
-- `REGION_NAME` — Your city name (e.g., "Idaho Falls, ID")
-- `REGION_LAT` / `REGION_LONG` — Map center coordinates
-- `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` — For push notifications (optional)
-
 ---
 
-## Philosophy
+## Features
 
-- **Zero Big Tech**: No Firebase, No Google Maps API, No AWS
-- **Simplicity**: The backend is a single deployable binary
-- **Privacy**: No user tracking, anonymous authentication only
-- **Local-First**: Cities own their data, not corporations
+- 📍 **Real-time map** — See reports as they happen
+- 🔔 **Telegram alerts** — Push notifications to your community
+- ✅ **Confirm/Dispute** — Community verification system
+- 🛡️ **Anti-abuse** — Rate limiting, vote tracking, disputed report hiding
+- 🔐 **Admin panel** — Manage reports and settings
+- 🌐 **PWA** — Works in any browser, installable on phones
+- 🔒 **Privacy-first** — Anonymous, no tracking
 
-## Tech Stack
-
-| Layer | Technology | Why |
-|-------|------------|-----|
-| **Backend** | [PocketBase](https://pocketbase.io/) | Single Go binary with SQLite, Auth, Realtime |
-| **Frontend** | Flutter | Cross-platform mobile (iOS/Android) |
-| **Maps** | [flutter_map](https://pub.dev/packages/flutter_map) + OpenStreetMap | No Google dependency |
-| **Notifications** | Telegram Bot API | Bypasses APNS/FCM complexity |
-
-## How It Works
-
-### Geohashing Strategy
-
-1. When a user reports an incident, the app calculates a **Geohash (precision 6)** from their coordinates
-2. The report is saved to the database with the geohash
-3. Users subscribe to the geohash of their **current location + neighbors** for realtime updates
-4. New reports in subscribed regions appear instantly on the map
-
-### Data Flow
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Flutter App   │────▶│   PocketBase    │────▶│  Telegram Bot   │
-│  (Reporter)     │     │  (Single Binary)│     │  (Alerts)       │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-        ▲                       │
-        │                       │ Realtime
-        │                       ▼
-┌─────────────────┐     ┌─────────────────┐
-│   Flutter App   │◀────│   Geohash       │
-│  (Subscribers)  │     │   Pub/Sub       │
-└─────────────────┘     └─────────────────┘
-```
-
-## Project Structure
-
-```
-notICE/
-├── backend/
-│   ├── pb_hooks/           # PocketBase JavaScript hooks
-│   │   └── telegram.pb.js  # Telegram notification trigger
-│   └── pb_schema.json      # Database schema export
-├── app/                    # Flutter mobile application
-│   └── ...
-├── docs/                   # Deployment guides
-├── LICENSE
-└── README.md
-```
+---
 
 ## Quick Start (3 Steps)
 
@@ -93,53 +44,170 @@ cd notICE
 This will ask for:
 - Your city/region name
 - Map coordinates (get from Google Maps)
-- Telegram bot token (optional, for push notifications)
+- Telegram bot token (optional)
 
-### 3. Done! 
+### 3. Create your admin account
 
-Your server is running at `http://localhost:8090`
+Open `http://localhost:8090/_/` and create a superuser account.
 
-**First time setup:** Open `http://localhost:8090/_/` to create an admin account.
+**Done!** Your server is running at `http://localhost:8090`
 
 ---
 
-## Manual Docker Setup
+## Post-Setup Configuration
 
-If you prefer to configure manually:
+### Admin Panel
 
-```bash
-# Copy and edit the config
-cp .env.example .env
-nano .env  # Add your settings
+Access the simplified admin at: `http://yourserver/admin.html`
 
-# Start the server
-docker compose up -d
+- **Region settings** — Name, coordinates, zoom level
+- **Telegram link** — Community channel for app's "Join" button
+- **Manage reports** — View and delete fake/spam reports
+
+> **Security:** The admin panel requires PocketBase superuser login.
+
+### Telegram Notifications
+
+1. Create a bot with [@BotFather](https://t.me/BotFather)
+2. Create a channel/group and add your bot as admin
+3. Get the chat ID (use [@userinfobot](https://t.me/userinfobot))
+4. Set environment variables:
+   ```
+   TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
+   TELEGRAM_CHAT_ID=-1001234567890
+   ```
+
+---
+
+## Anti-Abuse Features
+
+| Feature | Description |
+|---------|-------------|
+| **Rate limiting** | 1 report per hour per device |
+| **Vote tracking** | 1 confirm/dispute per device per report |
+| **Auto-hide** | Reports with 2+ disputes hidden from map |
+| **Admin delete** | Remove fake reports from admin panel |
+
+---
+
+## Architecture
+
+### Philosophy
+
+- **Zero Big Tech**: No Firebase, No Google Maps API, No AWS
+- **Simplicity**: The backend is a single deployable binary
+- **Privacy**: No user tracking, anonymous authentication only
+- **Local-First**: Cities own their data, not corporations
+
+### Tech Stack
+
+| Layer | Technology | Why |
+|-------|------------|-----|
+| **Backend** | [PocketBase](https://pocketbase.io/) | Single Go binary with SQLite, Auth, Realtime |
+| **Frontend** | Flutter (PWA) | Cross-platform, installable web app |
+| **Maps** | [flutter_map](https://pub.dev/packages/flutter_map) + OpenStreetMap | No Google dependency |
+| **Notifications** | Telegram Bot API | Bypasses APNS/FCM complexity |
+
+### Data Flow
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Flutter PWA   │────▶│   PocketBase    │────▶│  Telegram Bot   │
+│  (Reporter)     │     │  (Single Binary)│     │  (Alerts)       │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        ▲                       │
+        │                       │ Realtime
+        │                       ▼
+┌─────────────────┐     ┌─────────────────┐
+│   Flutter PWA   │◀────│   Geohash       │
+│  (Subscribers)  │     │   Pub/Sub       │
+└─────────────────┘     └─────────────────┘
 ```
 
+---
 
+## Deployment Options
 
-## Configuration
+### Option 1: Railway (Recommended)
 
-### Environment Variables
+Click the deploy button above. Set environment variables in Railway dashboard.
+
+### Option 2: Docker
+
+```bash
+cp .env.example .env
+nano .env  # Configure your settings
+
+# Local only
+docker compose up -d
+
+# With public HTTPS (Cloudflare Tunnel)
+docker compose --profile public up -d
+```
+
+### Option 3: Manual
+
+```bash
+# Download PocketBase for your platform
+# https://pocketbase.io/docs/
+
+# Copy files
+cp -r pb_hooks backend/
+cp -r pb_public backend/
+
+# Run
+./pocketbase serve --http=0.0.0.0:8090
+```
+
+---
+
+## Environment Variables
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `POCKETBASE_URL` | Your server URL | `https://notice.yourcity.gov` |
+| `REGION_NAME` | Your city name | `Idaho Falls, ID` |
+| `REGION_LAT` | Map center latitude | `43.4926` |
+| `REGION_LONG` | Map center longitude | `-112.0401` |
+| `REGION_ZOOM` | Default zoom level | `14` |
 | `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather | `123456:ABC-DEF...` |
-| `TELEGRAM_CHAT_ID` | Channel/Group ID for alerts | `-1001234567890` |
+| `TELEGRAM_CHAT_ID` | Channel/Group ID | `-1001234567890` |
 
-## Self-Hosting Guide
+---
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for complete instructions on:
+## Project Structure
 
-- Setting up a VPS (DigitalOcean, Hetzner, etc.)
-- Configuring SSL with Let's Encrypt
-- Running PocketBase as a systemd service
-- Creating a Telegram bot for your region
+```
+notICE/
+├── app/                    # Flutter PWA source
+├── backend/                # PocketBase instance
+│   ├── pb_hooks/           # Server-side JavaScript hooks
+│   └── pb_public/          # Static files (PWA + admin.html)
+├── pb_hooks/               # Hooks template (copied to backend)
+├── pb_public/              # Public files template
+├── docker-compose.yml      # Docker deployment
+├── setup.sh                # Interactive setup wizard
+└── .env.example            # Configuration template
+```
+
+---
+
+## Security Notes
+
+- **Change default admin password** before going public
+- **PocketBase API rules** control who can read/write data
+- **Rate limiting** is client-side (blocks casual abuse)
+- **Vote tracking** prevents spam voting
+
+For production, consider:
+- Running behind a reverse proxy (nginx/Caddy)
+- Enabling HTTPS (Cloudflare Tunnel or Let's Encrypt)
+- Regular backups of `pb_data/`
+
+---
 
 ## Contributing
 
-Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+Contributions welcome! Please open an issue first to discuss changes.
 
 ## License
 
