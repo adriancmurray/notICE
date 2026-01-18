@@ -3,11 +3,11 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-const RESOURCES = {"flutter_bootstrap.js": "e753a9174f85a10fd43254975976ad74",
+const RESOURCES = {"flutter_bootstrap.js": "527c073d1ac2932f06e0d50172f56959",
 "version.json": "7ef0093f2b3a91a39d213296dca796d7",
-"index.html": "08ca76644a805d3f718ace0fe5a83d91",
-"/": "08ca76644a805d3f718ace0fe5a83d91",
-"main.dart.js": "b61aa0721b1e971f404027b1a1d6bcf9",
+"index.html": "ce43eb2cff0e1eef429b85b35ac733e1",
+"/": "ce43eb2cff0e1eef429b85b35ac733e1",
+"main.dart.js": "e0c42fe57ade80303ca3e071ffbe1997",
 "flutter.js": "888483df48293866f9f41d3d9274a779",
 "favicon.png": "7af78bf37f6efa9d532d083c5b2e8c80",
 "icons/Icon-192.png": "52b48c10c1dca7a4b844a8847b50afc0",
@@ -15,6 +15,7 @@ const RESOURCES = {"flutter_bootstrap.js": "e753a9174f85a10fd43254975976ad74",
 "icons/Icon-maskable-512.png": "7055b2dd2e8cc62078bf6000e10f77c7",
 "icons/Icon-512.png": "7055b2dd2e8cc62078bf6000e10f77c7",
 "manifest.json": "3fc29f9294b755bca0378065b89e216e",
+"push-sw.js": "44a759312247ff36b6bc19f3066940b7",
 "assets/AssetManifest.json": "af236ac12b2f46aec036331dff11b999",
 "assets/NOTICES": "4efc6950ca839217c846f94e1f877f1c",
 "assets/FontManifest.json": "7b2a36307916a9721811788013e65289",
@@ -22,7 +23,7 @@ const RESOURCES = {"flutter_bootstrap.js": "e753a9174f85a10fd43254975976ad74",
 "assets/packages/flutter_map/lib/assets/flutter_map_logo.png": "208d63cc917af9713fc9572bd5c09362",
 "assets/shaders/ink_sparkle.frag": "ecc85a2e95f5e9f53123dcaf8cb9b6ce",
 "assets/AssetManifest.bin": "028cdb9d815cee3bf5762aedd42eeae8",
-"assets/fonts/MaterialIcons-Regular.otf": "d8dd1745f2723f5e99195c677ef8c7fc",
+"assets/fonts/MaterialIcons-Regular.otf": "e7069dfd19b331be16bed984668fe080",
 "canvaskit/skwasm.js": "1ef3ea3a0fec4569e5d531da25f34095",
 "canvaskit/skwasm_heavy.js": "413f5b2b2d9345f37de148e2544f584f",
 "canvaskit/skwasm.js.symbols": "0088242d10d7e7d6d2649d1fe1bda7c1",
@@ -205,3 +206,77 @@ function onlineFirst(event) {
     })
   );
 }
+
+// === notICE Push Notification Handler (Injected) ===
+// VERSION: 2026-01-18-140057
+console.log('[Push SW] Service Worker Loaded v2026-01-18-140057');
+
+self.addEventListener('push', function (event) {
+    console.log('[Push SW] Push received:', event);
+
+    let data = {
+        title: '🚨 notICE Alert',
+        body: 'New safety report in your area',
+        id: null,
+        url: '/'
+    };
+
+    if (event.data) {
+        try {
+            const json = event.data.json();
+            console.log('[Push SW] Payload:', json);
+            data = Object.assign(data, json);
+        } catch (e) {
+            console.log('[Push SW] Failed to parse push data:', e);
+            data.body = event.data.text() || data.body;
+        }
+    }
+
+    const options = {
+        body: data.body,
+        icon: '/icons/Icon-192.png',
+        tag: data.id || 'notice-alert-' + Date.now(),
+        data: {
+            url: data.url,
+            id: data.id
+        },
+        requireInteraction: false
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(data.title, options)
+            .then(() => console.log('[Push SW] Notification shown'))
+            .catch(err => console.error('[Push SW] showNotification error:', err))
+    );
+});
+
+self.addEventListener('notificationclick', function (event) {
+    console.log('[Push SW] Notification clicked:', event.action);
+    event.notification.close();
+
+    if (event.action === 'dismiss') {
+        return;
+    }
+
+    const url = event.notification.data?.url || '/';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .then(function (clientList) {
+                for (const client of clientList) {
+                    if (client.url.includes(self.location.origin) && 'focus' in client) {
+                        client.navigate(url);
+                        return client.focus();
+                    }
+                }
+                if (clients.openWindow) {
+                    return clients.openWindow(url);
+                }
+            })
+    );
+});
+
+self.addEventListener('pushsubscriptionchange', function (event) {
+    console.log('[Push SW] Subscription changed, re-subscribing...');
+});
+// === End of notICE Push Handler ===

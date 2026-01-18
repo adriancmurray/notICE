@@ -9,6 +9,7 @@ import 'package:app/services/location_service.dart';
 import 'package:app/services/pocketbase_service.dart';
 import 'package:app/services/geohash_service.dart';
 import 'package:app/services/vote_tracking_service.dart';
+import 'package:app/services/push_notification_service.dart';
 import 'package:app/widgets/report_marker.dart';
 import 'package:app/widgets/report_form.dart';
 
@@ -44,6 +45,8 @@ class _MapScreenState extends State<MapScreen> {
   int _selectedTimeFilter = 24; // Default to 24 hours
   String? _telegramLink; // Optional Telegram channel link from server
   StreamSubscription? _locationSubscription;
+  bool _pushEnabled = false;
+  bool _pushSupported = true; // TEMP: Force to true for testing
 
   @override
   void initState() {
@@ -111,6 +114,21 @@ class _MapScreenState extends State<MapScreen> {
 
     // Listen for new reports
     _reportsSubscription = _pocketbaseService.reportsStream.listen(_onNewReport);
+
+    // Initialize push notifications
+    try {
+      await PushNotificationService.instance.initialize();
+      final supported = PushNotificationService.instance.isSupported;
+      final enabled = await PushNotificationService.instance.isEnabled();
+      if (mounted) {
+        setState(() {
+          // _pushSupported = supported;
+          _pushEnabled = enabled;
+        });
+      }
+    } catch (e) {
+      debugPrint('Push notification init error: $e');
+    }
   }
 
   Future<void> _updateSubscriptions() async {
@@ -202,6 +220,51 @@ class _MapScreenState extends State<MapScreen> {
         onSubmit: _submitReport,
       ),
     );
+  }
+
+  Future<void> _togglePushNotifications() async {
+    final pushService = PushNotificationService.instance;
+    
+    if (_pushEnabled) {
+      // Disable
+      final success = await pushService.disableNotifications();
+      if (success && mounted) {
+        setState(() => _pushEnabled = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Push notifications disabled'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } else {
+      // Enable with current geohash
+      final geohash = _geohashService.encode(
+        _currentLocation.latitude,
+        _currentLocation.longitude,
+      );
+      final error = await pushService.enableNotifications(geohash);
+      if (mounted) {
+        if (error == null) {
+          setState(() => _pushEnabled = true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🔔 Push alerts enabled for this area!'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          // Revert to simple message but keep error in debug console
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not enable notifications. Please allow notifications and try again.'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Future<void> _submitReport(ReportType type, String? description) async {
@@ -370,6 +433,56 @@ class _MapScreenState extends State<MapScreen> {
                                       color: Color(0xFF0088CC),
                                     ),
                                   ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        // Push Alert button (if supported)
+                        if (_pushSupported) ...[
+                          GestureDetector(
+                            onTap: _togglePushNotifications,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _pushEnabled
+                                    ? Colors.orange.withValues(alpha: 0.2)
+                                    : Colors.grey.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _pushEnabled ? Icons.notifications_active : Icons.notifications_off,
+                                    size: 16,
+                                    color: _pushEnabled ? Colors.orange : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _pushEnabled ? 'Alerts' : 'Enable',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: _pushEnabled ? Colors.orange : Colors.grey,
+                                    ),
+                                  ),
+                                  if (_pushEnabled) ...[
+                                    const SizedBox(width: 8),
+                                    TextButton(
+                                      onPressed: () => PushNotificationService.instance.testLocalNotification(),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                                        minimumSize: Size.zero,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      child: const Text('Test', style: TextStyle(fontSize: 10, color: Colors.blue)),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
