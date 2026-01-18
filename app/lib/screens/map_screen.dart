@@ -38,20 +38,37 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _initialize() async {
-    // Get initial location
-    _currentLocation = await _locationService.getCurrentLocation();
-    
+    try {
+      // Get initial location (may fail on macOS without permission)
+      _currentLocation = await _locationService.getCurrentLocation();
+    } catch (e) {
+      // Use default location if location service fails
+      debugPrint('Location service error: $e');
+      _currentLocation = const LatLng(AppConfig.defaultLat, AppConfig.defaultLong);
+    }
+
     // Subscribe to location updates
     _locationSubscription = _locationService.locationStream.listen(_onLocationUpdate);
-    await _locationService.startTracking();
+    
+    try {
+      await _locationService.startTracking();
+    } catch (e) {
+      debugPrint('Failed to start location tracking: $e');
+    }
 
     // Subscribe to reports in current area
-    await _updateSubscriptions();
+    try {
+      await _updateSubscriptions();
+    } catch (e) {
+      debugPrint('Failed to update subscriptions: $e');
+    }
 
     // Listen for new reports
     _reportsSubscription = _pocketbaseService.reportsStream.listen(_onNewReport);
 
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _updateSubscriptions() async {

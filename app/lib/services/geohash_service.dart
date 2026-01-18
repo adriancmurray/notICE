@@ -35,17 +35,18 @@ class GeohashService {
   /// the given location.
   Set<String> getNeighborhood(String centerHash) {
     final neighbors = _geoHasher.neighbors(centerHash);
-    return {
-      centerHash,
-      neighbors['n']!,
-      neighbors['ne']!,
-      neighbors['e']!,
-      neighbors['se']!,
-      neighbors['s']!,
-      neighbors['sw']!,
-      neighbors['w']!,
-      neighbors['nw']!,
-    };
+    
+    // Safely collect neighbors, filtering out any null values
+    final result = <String>{centerHash};
+    
+    for (final dir in ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']) {
+      final neighbor = neighbors[dir];
+      if (neighbor != null) {
+        result.add(neighbor);
+      }
+    }
+    
+    return result;
   }
 
   /// Get neighborhood geohashes for a lat/long location.
@@ -58,6 +59,9 @@ class GeohashService {
   /// 
   /// Returns a filter like: (geohash ~ "abc123" || geohash ~ "abc124" || ...)
   String buildGeohashFilter(Set<String> geohashes) {
+    if (geohashes.isEmpty) {
+      return '(1=0)'; // Return false condition if no geohashes
+    }
     final conditions = geohashes.map((h) => 'geohash ~ "$h"').join(' || ');
     return '($conditions)';
   }
