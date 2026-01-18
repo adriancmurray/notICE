@@ -3,6 +3,7 @@ import 'package:pocketbase/pocketbase.dart';
 import 'package:app/config/app_config.dart';
 import 'package:app/models/report.dart';
 import 'package:app/services/geohash_service.dart';
+import 'package:app/services/vote_tracking_service.dart';
 
 /// Service for PocketBase backend communication.
 class PocketbaseService {
@@ -162,7 +163,16 @@ class PocketbaseService {
   }
 
   /// Confirm a report (increment confirmations count).
+  /// 
+  /// Throws if user has already voted on this report.
   Future<void> confirmReport(String reportId) async {
+    final voteService = VoteTrackingService.instance;
+    
+    // Check if already voted
+    if (await voteService.hasVoted(reportId)) {
+      throw Exception('You have already voted on this report');
+    }
+    
     // Fetch current report to get current count
     final record = await _pb.collection('reports').getOne(reportId);
     final currentConfirmations = record.getIntValue('confirmations');
@@ -171,10 +181,22 @@ class PocketbaseService {
       reportId,
       body: {'confirmations': currentConfirmations + 1},
     );
+    
+    // Record the vote
+    await voteService.recordConfirmation(reportId);
   }
 
   /// Dispute a report (increment disputes count).
+  /// 
+  /// Throws if user has already voted on this report.
   Future<void> disputeReport(String reportId) async {
+    final voteService = VoteTrackingService.instance;
+    
+    // Check if already voted
+    if (await voteService.hasVoted(reportId)) {
+      throw Exception('You have already voted on this report');
+    }
+    
     // Fetch current report to get current count
     final record = await _pb.collection('reports').getOne(reportId);
     final currentDisputes = record.getIntValue('disputes');
@@ -183,6 +205,9 @@ class PocketbaseService {
       reportId,
       body: {'disputes': currentDisputes + 1},
     );
+    
+    // Record the vote
+    await voteService.recordDispute(reportId);
   }
 
   /// Delete a report (admin only).
