@@ -41,10 +41,14 @@ class _ReportFormState extends State<ReportForm> {
     if (!canSubmit) {
       final remaining = await _rateLimitService.getRemainingCooldown();
       if (mounted) {
+        // Close the bottom sheet first so the message is visible
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Please wait ${remaining.inMinutes} minutes before submitting another report'),
+            content: Text('⏱️ Please wait ${remaining.inMinutes} minutes before submitting another report'),
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
           ),
         );
       }
