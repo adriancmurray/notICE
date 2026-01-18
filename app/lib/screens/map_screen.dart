@@ -8,6 +8,7 @@ import 'package:app/models/report.dart';
 import 'package:app/services/location_service.dart';
 import 'package:app/services/pocketbase_service.dart';
 import 'package:app/services/geohash_service.dart';
+import 'package:app/services/vote_tracking_service.dart';
 import 'package:app/widgets/report_marker.dart';
 import 'package:app/widgets/report_form.dart';
 
@@ -289,17 +290,19 @@ class _MapScreenState extends State<MapScreen> {
                   ],
                 ),
 
-              // Report markers
+              // Report markers (hide disputed reports with 2+ disputes)
               MarkerLayer(
-                markers: _reports.map((report) => Marker(
-                  point: LatLng(report.lat, report.long),
-                  width: 40,
-                  height: 40,
-                  child: ReportMarker(
-                    report: report,
-                    onTap: () => _showReportDetails(report),
-                  ),
-                )).toList(),
+                markers: _reports
+                    .where((r) => !r.isDisputed) // Auto-hide disputed reports
+                    .map((report) => Marker(
+                      point: LatLng(report.lat, report.long),
+                      width: 40,
+                      height: 40,
+                      child: ReportMarker(
+                        report: report,
+                        onTap: () => _showReportDetails(report),
+                      ),
+                    )).toList(),
               ),
             ],
           ),
@@ -481,60 +484,222 @@ class _MapScreenState extends State<MapScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      builder: (context) => _ReportDetailSheet(
+        report: report,
+        pocketbaseService: _pocketbaseService,
+        onVoted: () {
+          // Refresh reports after voting
+          _refreshReports();
+        },
+      ),
+    );
+  }
+}
+
+/// Bottom sheet showing report details with vote buttons.
+class _ReportDetailSheet extends StatefulWidget {
+  final Report report;
+  final PocketbaseService pocketbaseService;
+  final VoidCallback onVoted;
+
+  const _ReportDetailSheet({
+    required this.report,
+    required this.pocketbaseService,
+    required this.onVoted,
+  });
+
+  @override
+  State<_ReportDetailSheet> createState() => _ReportDetailSheetState();
+}
+
+class _ReportDetailSheetState extends State<_ReportDetailSheet> {
+  bool _isVoting = false;
+  String? _voteStatus; // 'confirm', 'dispute', or null
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVoteStatus();
+  }
+
+  Future<void> _loadVoteStatus() async {
+    final status = await VoteTrackingService.instance.getVoteStatus(widget.report.id);
+    if (mounted) {
+      setState(() => _voteStatus = status);
+    }
+  }
+
+  Future<void> _confirmReport() async {
+    if (_voteStatus != null || _isVoting) return;
+    
+    setState(() => _isVoting = true);
+    try {
+      await widget.pocketbaseService.confirmReport(widget.report.id);
+      setState(() => _voteStatus = 'confirm');
+      widget.onVoted();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Report confirmed ✅'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isVoting = false);
+    }
+  }
+
+  Future<void> _disputeReport() async {
+    if (_voteStatus != null || _isVoting) return;
+    
+    setState(() => _isVoting = true);
+    try {
+      await widget.pocketbaseService.disputeReport(widget.report.id);
+      setState(() => _voteStatus = 'dispute');
+      widget.onVoted();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Report disputed ❌'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isVoting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasVoted = _voteStatus != null;
+    final report = widget.report;
+    
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with emoji and type
+          Row(
+            children: [
+              Text(
+                report.type.emoji,
+                style: const TextStyle(fontSize: 32),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      report.type.displayName,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      report.timeAgo,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Credibility badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: report.isDisputed 
+                    ? Colors.red.withValues(alpha: 0.2)
+                    : Colors.green.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '✅ ${report.confirmations}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '❌ ${report.disputes}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          // Description
+          if (report.description?.isNotEmpty ?? false) ...[
+            const SizedBox(height: 16),
+            Text(
+              report.description!,
+              style: const TextStyle(fontSize: 16),
+            ),
+          ],
+          
+          const SizedBox(height: 20),
+          
+          // Vote buttons
+          if (hasVoted)
+            Center(
+              child: Text(
+                _voteStatus == 'confirm' 
+                  ? 'You confirmed this report ✅'
+                  : 'You disputed this report ❌',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else
             Row(
               children: [
-                Text(
-                  report.type.emoji,
-                  style: const TextStyle(fontSize: 32),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isVoting ? null : _confirmReport,
+                    icon: const Text('✅'),
+                    label: const Text('Confirm'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.green,
+                      side: const BorderSide(color: Colors.green),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        report.type.displayName,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        report.timeAgo,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                  child: OutlinedButton.icon(
+                    onPressed: _isVoting ? null : _disputeReport,
+                    icon: const Text('❌'),
+                    label: const Text('Dispute'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ),
               ],
             ),
-            if (report.description?.isNotEmpty ?? false) ...[
-              const SizedBox(height: 16),
-              Text(
-                report.description!,
-                style: const TextStyle(fontSize: 16),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Text(
-              'Geohash: ${report.geohash}',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontFamily: 'monospace',
-                fontSize: 12,
-              ),
-            ),
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
-          ],
-        ),
+          
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
+        ],
       ),
     );
   }
