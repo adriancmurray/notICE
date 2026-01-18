@@ -173,24 +173,37 @@
             <p>Checking access...</p>
         </div>
 
-        <!-- Access denied -->
-        <div id="denied" style="display: none;" class="access-denied">
+        <!-- Login form -->
+        <div id="login" style="display: none;" class="access-denied">
             <h1>🔒</h1>
-            <h2>Local Access Only</h2>
-            <p>This admin page is only accessible from the server itself.</p>
-            <p style="margin-top: 16px; font-size: 12px; color: #666;">
-                Access from: <code>http://localhost:8090/admin.html</code>
-            </p>
+            <h2>Admin Login</h2>
+            <p style="margin-bottom: 24px;">Enter your PocketBase admin credentials</p>
+            <div class="card" style="text-align: left; max-width: 300px; margin: 0 auto;">
+                <div class="field">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="admin@example.com">
+                </div>
+                <div class="field">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••">
+                </div>
+                <button onclick="doLogin()">Login</button>
+                <p id="loginError" style="color: #ffcdd2; margin-top: 12px; display: none;"></p>
+            </div>
         </div>
 
         <!-- Admin panel -->
         <div id="admin" style="display: none;">
             <header>
                 <span class="emoji">🧊</span>
-                <div>
+                <div style="flex: 1;">
                     <h1>notICE Admin</h1>
                     <p style="font-size: 12px; color: #666;">Server Configuration</p>
                 </div>
+                <button onclick="doLogout()"
+                    style="width: auto; padding: 8px 16px; font-size: 12px; background: #1e4976;">
+                    Logout
+                </button>
             </header>
 
             <div id="successMsg" class="success">Settings saved!</div>
@@ -277,12 +290,6 @@
         let map = null;
         let marker = null;
 
-        // Check if accessing from localhost
-        function isLocalAccess() {
-            const host = window.location.hostname;
-            return host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.');
-        }
-
         function initMap(lat = 39.8283, lng = -98.5795, zoom = 4) {
             // Default to center of US if no coords
             map = L.map('map').setView([lat, lng], zoom);
@@ -357,14 +364,74 @@
             );
         }
 
-        async function init() {
-            if (!isLocalAccess()) {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('denied').style.display = 'block';
-                return;
+        // Auth state
+        let adminToken = sessionStorage.getItem('pb_admin_token');
+
+        async function doLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorEl = document.getElementById('loginError');
+
+            try {
+                const res = await fetch('/api/admins/auth-with-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ identity: email, password })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.message || 'Login failed');
+                }
+
+                // Store token
+                adminToken = data.token;
+                sessionStorage.setItem('pb_admin_token', adminToken);
+
+                // Show admin panel
+                document.getElementById('login').style.display = 'none';
+                await showAdminPanel();
+
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.style.display = 'block';
+            }
+        }
+
+        function doLogout() {
+            adminToken = null;
+            sessionStorage.removeItem('pb_admin_token');
+            location.reload();
+        }
+
+        async function checkAuth() {
+            if (!adminToken) return false;
+
+            try {
+                const res = await fetch('/api/admins/auth-refresh', {
+                    method: 'POST',
+                    headers: { 'Authorization': adminToken }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    adminToken = data.token;
+                    sessionStorage.setItem('pb_admin_token', adminToken);
+                    return true;
+                }
+            } catch (e) {
+                // Token invalid
             }
 
+            adminToken = null;
+            sessionStorage.removeItem('pb_admin_token');
+            return false;
+        }
+
+        async function showAdminPanel() {
             document.getElementById('loading').style.display = 'none';
+            document.getElementById('login').style.display = 'none';
             document.getElementById('admin').style.display = 'block';
 
             // Load existing config first
@@ -383,6 +450,18 @@
 
             // Load reports for management
             await loadReports();
+        }
+
+        async function init() {
+            const isAuthenticated = await checkAuth();
+
+            document.getElementById('loading').style.display = 'none';
+
+            if (isAuthenticated) {
+                await showAdminPanel();
+            } else {
+                document.getElementById('login').style.display = 'block';
+            }
         }
 
         async function loadConfig() {
