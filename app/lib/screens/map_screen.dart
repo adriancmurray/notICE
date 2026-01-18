@@ -42,10 +42,27 @@ class _MapScreenState extends State<MapScreen> {
       // Get initial location (may fail on macOS without permission)
       _currentLocation = await _locationService.getCurrentLocation();
     } catch (e) {
-      // Use default location if location service fails
+      // Location failed - fetch region from server
       debugPrint('Location service error: $e');
-      _currentLocation = const LatLng(AppConfig.defaultLat, AppConfig.defaultLong);
     }
+
+    // If no location, get default from server config
+    if (_currentLocation == null) {
+      try {
+        final region = await _pocketbaseService.fetchRegionConfig();
+        if (region != null) {
+          _currentLocation = LatLng(
+            (region['lat'] as num).toDouble(),
+            (region['long'] as num).toDouble(),
+          );
+        }
+      } catch (e) {
+        debugPrint('Failed to fetch region config: $e');
+      }
+    }
+
+    // Ultimate fallback if both fail
+    _currentLocation ??= const LatLng(AppConfig.defaultLat, AppConfig.defaultLong);
 
     // Subscribe to location updates
     _locationSubscription = _locationService.locationStream.listen(_onLocationUpdate);

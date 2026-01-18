@@ -29,6 +29,29 @@ class PocketbaseService {
     // For now, the API rules allow public read/create.
   }
 
+  /// Fetch the region configuration from the server.
+  /// 
+  /// Returns {name, lat, long, zoom} or null if not configured.
+  Future<Map<String, dynamic>?> fetchRegionConfig() async {
+    try {
+      final records = await _pb.collection('config').getList(
+        page: 1,
+        perPage: 1,
+        filter: 'key = "region"',
+      );
+
+      if (records.items.isNotEmpty) {
+        final value = records.items.first.data['value'];
+        if (value is Map<String, dynamic>) {
+          return value;
+        }
+      }
+    } catch (e) {
+      // Config not available, will use fallback
+    }
+    return null;
+  }
+
   /// Fetch recent reports for a set of geohashes.
   Future<List<Report>> fetchReports({
     required Set<String> geohashes,
