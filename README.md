@@ -4,6 +4,19 @@
 
 notICE allows a city or region to self-host a single server that citizens can connect to via a mobile app to report and view dangerous situations — **anonymously**.
 
+## 🚀 One-Click Deploy
+
+Deploy your own notICE server in 60 seconds:
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/notICE?referralCode=notICE)
+
+After deploying, set these environment variables in Railway:
+- `REGION_NAME` — Your city name (e.g., "Idaho Falls, ID")
+- `REGION_LAT` / `REGION_LONG` — Map center coordinates
+- `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` — For push notifications (optional)
+
+---
+
 ## Philosophy
 
 - **Zero Big Tech**: No Firebase, No Google Maps API, No AWS
