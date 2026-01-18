@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>notICE needs your location to show nearby safety reports and let you report incidents in your area.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>notICE can alert you about safety incidents near you even when the app is in the background.</string>
 </dict>
 </plist>

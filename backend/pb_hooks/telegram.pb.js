@@ -9,6 +9,8 @@
  * Environment variables (set in PocketBase settings or system env):
  * - TELEGRAM_BOT_TOKEN: Bot token from @BotFather
  * - TELEGRAM_CHAT_ID: Target channel/group ID
+ * 
+ * Updated for PocketBase 0.25+ hooks API.
  */
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
@@ -29,9 +31,6 @@ const TYPE_LABEL = {
 
 /**
  * Send a message to Telegram.
- * @param {string} token - Bot token
- * @param {string} chatId - Target chat ID
- * @param {string} message - Message text (supports Markdown)
  */
 function sendTelegramMessage(token, chatId, message) {
     const url = `${TELEGRAM_API}${token}/sendMessage`;
@@ -48,7 +47,7 @@ function sendTelegramMessage(token, chatId, message) {
             parse_mode: "Markdown",
             disable_web_page_preview: true
         }),
-        timeout: 10 // seconds
+        timeout: 10
     });
 
     if (response.statusCode !== 200) {
@@ -61,8 +60,6 @@ function sendTelegramMessage(token, chatId, message) {
 
 /**
  * Format a report for Telegram notification.
- * @param {Object} record - PocketBase record
- * @returns {string} Formatted message
  */
 function formatReportMessage(record) {
     const emoji = TYPE_EMOJI[record.get("type")] || "📍";
@@ -72,7 +69,6 @@ function formatReportMessage(record) {
     const lat = record.get("lat");
     const long = record.get("long");
 
-    // OpenStreetMap link (no Google!)
     const mapLink = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${long}#map=17/${lat}/${long}`;
 
     return `${emoji} *${label}*
@@ -84,8 +80,16 @@ function formatReportMessage(record) {
 ⏰ ${new Date().toISOString()}`;
 }
 
-// Hook: Listen for new reports
-onRecordAfterCreateRequest((e) => {
+// Hook: Listen for new reports (PocketBase 0.25+ API)
+onRecordCreateRequest((e) => {
+    // Only trigger after record is created
+    e.next();
+
+    // Only process reports collection
+    if (e.collection.name !== "reports") {
+        return;
+    }
+
     const token = $os.getenv("TELEGRAM_BOT_TOKEN");
     const chatId = $os.getenv("TELEGRAM_CHAT_ID");
 
@@ -103,4 +107,4 @@ onRecordAfterCreateRequest((e) => {
         // Log but don't block the request
         console.log("Failed to send Telegram notification:", err.message);
     }
-}, "reports");
+});
