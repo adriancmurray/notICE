@@ -1,12 +1,21 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 /**
- * Migration hook to add confirmations/disputes fields to reports collection.
+ * Migration hook to ensure reports collection has verification fields.
  * 
- * This runs on bootstrap and adds the fields if they don't exist.
+ * This runs on every record create and adds fields if missing.
+ * Uses a one-time flag to avoid repeated checks.
  */
 
-onAfterBootstrap((e) => {
+// One-time migration flag
+let migrationDone = false;
+
+onRecordCreate((e) => {
+    // Only run migration once per server session
+    if (migrationDone || e.collection.name !== "reports") {
+        return;
+    }
+
     try {
         const collection = $app.findCollectionByNameOrId("reports");
 
@@ -27,7 +36,6 @@ onAfterBootstrap((e) => {
                 type: "number",
                 required: false,
                 min: 0,
-                max: null,
             });
             needsSave = true;
             console.log("Added confirmations field to reports collection");
@@ -39,7 +47,6 @@ onAfterBootstrap((e) => {
                 type: "number",
                 required: false,
                 min: 0,
-                max: null,
             });
             needsSave = true;
             console.log("Added disputes field to reports collection");
@@ -49,7 +56,10 @@ onAfterBootstrap((e) => {
             $app.save(collection);
             console.log("Reports collection updated with verification fields");
         }
+
+        migrationDone = true;
     } catch (err) {
         console.log("Could not update reports collection:", err);
+        migrationDone = true; // Don't keep retrying
     }
 });
