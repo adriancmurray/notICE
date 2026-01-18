@@ -24,45 +24,50 @@ class _MapScreenState extends State<MapScreen> {
   final _pocketbaseService = PocketbaseService.instance;
   final _geohashService = GeohashService.instance;
 
-  LatLng? _currentLocation;
+  // Start with Idaho Falls coordinates - will update when location/server responds
+  LatLng _currentLocation = const LatLng(43.4926, -112.0401);
   Set<String> _subscribedGeohashes = {};
   final List<Report> _reports = [];
   StreamSubscription? _reportsSubscription;
   StreamSubscription? _locationSubscription;
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initialize();
+    _initializeAsync();
   }
 
-  Future<void> _initialize() async {
+  Future<void> _initializeAsync() async {
+    // Initialize PocketBase (non-blocking)
     try {
-      // Get initial location (may fail on macOS without permission)
-      _currentLocation = await _locationService.getCurrentLocation();
+      await _pocketbaseService.initialize();
     } catch (e) {
-      // Location failed - fetch region from server
-      debugPrint('Location service error: $e');
+      debugPrint('PocketBase init error: $e');
     }
 
-    // If no location, get default from server config
-    if (_currentLocation == null) {
+    try {
+      // Get location
+      final loc = await _locationService.getCurrentLocation();
+      if (mounted) {
+        setState(() => _currentLocation = loc);
+      }
+    } catch (e) {
+      debugPrint('Location service error: $e');
+      // Try to get from server
       try {
         final region = await _pocketbaseService.fetchRegionConfig();
-        if (region != null) {
-          _currentLocation = LatLng(
-            (region['lat'] as num).toDouble(),
-            (region['long'] as num).toDouble(),
-          );
+        if (region != null && mounted) {
+          setState(() {
+            _currentLocation = LatLng(
+              (region['lat'] as num).toDouble(),
+              (region['long'] as num).toDouble(),
+            );
+          });
         }
-      } catch (e) {
-        debugPrint('Failed to fetch region config: $e');
+      } catch (e2) {
+        debugPrint('Failed to fetch region config: $e2');
       }
     }
-
-    // Ultimate fallback if both fail
-    _currentLocation ??= const LatLng(AppConfig.defaultLat, AppConfig.defaultLong);
 
     // Subscribe to location updates
     _locationSubscription = _locationService.locationStream.listen(_onLocationUpdate);
@@ -82,18 +87,12 @@ class _MapScreenState extends State<MapScreen> {
 
     // Listen for new reports
     _reportsSubscription = _pocketbaseService.reportsStream.listen(_onNewReport);
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
   }
 
   Future<void> _updateSubscriptions() async {
-    if (_currentLocation == null) return;
-
     final newGeohashes = _geohashService.getNeighborhoodForLocation(
-      _currentLocation!.latitude,
-      _currentLocation!.longitude,
+      _currentLocation.latitude,
+      _currentLocation.longitude,
     );
 
     // Only update if geohashes changed
@@ -148,32 +147,26 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _centerOnLocation() {
-    if (_currentLocation != null) {
-      _mapController.move(_currentLocation!, AppConfig.defaultZoom);
+    _mapController.move(_currentLocation, AppConfig.defaultZoom);
     }
-  }
 
   void _showReportForm() {
-    if (_currentLocation == null) return;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ReportForm(
-        location: _currentLocation!,
+        location: _currentLocation,
         onSubmit: _submitReport,
       ),
     );
   }
 
   Future<void> _submitReport(ReportType type, String? description) async {
-    if (_currentLocation == null) return;
-
     try {
       final report = await _pocketbaseService.submitReport(
-        lat: _currentLocation!.latitude,
-        long: _currentLocation!.longitude,
+        lat: _currentLocation.latitude,
+        long: _currentLocation.longitude,
         type: type,
         description: description,
       );
@@ -211,14 +204,6 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     return Scaffold(
       body: Stack(
         children: [
@@ -226,8 +211,7 @@ class _MapScreenState extends State<MapScreen> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: _currentLocation ?? 
-                  const LatLng(AppConfig.defaultLat, AppConfig.defaultLong),
+              initialCenter: _currentLocation,
               initialZoom: AppConfig.defaultZoom,
               minZoom: 10,
               maxZoom: 18,
@@ -241,11 +225,10 @@ class _MapScreenState extends State<MapScreen> {
               ),
 
               // Current location marker
-              if (_currentLocation != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _currentLocation!,
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _currentLocation,
                       width: 24,
                       height: 24,
                       child: Container(

@@ -13,73 +13,6 @@
  * Updated for PocketBase 0.25+ hooks API.
  */
 
-const TELEGRAM_API = "https://api.telegram.org/bot";
-
-// Report type to emoji mapping
-const TYPE_EMOJI = {
-    danger: "🚨",
-    warning: "⚠️",
-    safe: "✅"
-};
-
-// Report type to human-readable label
-const TYPE_LABEL = {
-    danger: "DANGER",
-    warning: "Warning",
-    safe: "All Clear"
-};
-
-/**
- * Send a message to Telegram.
- */
-function sendTelegramMessage(token, chatId, message) {
-    const url = `${TELEGRAM_API}${token}/sendMessage`;
-
-    const response = $http.send({
-        url: url,
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            chat_id: chatId,
-            text: message,
-            parse_mode: "Markdown",
-            disable_web_page_preview: true
-        }),
-        timeout: 10
-    });
-
-    if (response.statusCode !== 200) {
-        console.log("Telegram API error:", response.raw);
-        throw new Error(`Telegram API returned ${response.statusCode}`);
-    }
-
-    return response.json;
-}
-
-/**
- * Format a report for Telegram notification.
- */
-function formatReportMessage(record) {
-    const emoji = TYPE_EMOJI[record.get("type")] || "📍";
-    const label = TYPE_LABEL[record.get("type")] || record.get("type");
-    const description = record.get("description") || "No description provided";
-    const geohash = record.get("geohash");
-    const lat = record.get("lat");
-    const long = record.get("long");
-
-    const mapLink = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${long}#map=17/${lat}/${long}`;
-
-    return `${emoji} *${label}*
-
-📝 ${description}
-
-📍 [View Location](${mapLink})
-🗺️ Geohash: \`${geohash}\`
-⏰ ${new Date().toISOString()}`;
-}
-
 // Hook: Listen for new reports (PocketBase 0.25+ API)
 onRecordCreateRequest((e) => {
     // Only trigger after record is created
@@ -100,9 +33,54 @@ onRecordCreateRequest((e) => {
     }
 
     try {
-        const message = formatReportMessage(e.record);
-        sendTelegramMessage(token, chatId, message);
-        console.log(`Telegram notification sent for report ${e.record.id}`);
+        // Report type to emoji/label mapping
+        const TYPE_EMOJI = {
+            danger: "🚨",
+            warning: "⚠️",
+            safe: "✅"
+        };
+        const TYPE_LABEL = {
+            danger: "DANGER",
+            warning: "Warning",
+            safe: "All Clear"
+        };
+
+        // Format message
+        const reportType = e.record.get("type");
+        const emoji = TYPE_EMOJI[reportType] || "📍";
+        const label = TYPE_LABEL[reportType] || reportType;
+        const description = e.record.get("description") || "No description provided";
+        const geohash = e.record.get("geohash");
+        const lat = e.record.get("lat");
+        const long = e.record.get("long");
+
+        const mapLink = "https://www.openstreetmap.org/?mlat=" + lat + "&mlon=" + long + "#map=17/" + lat + "/" + long;
+
+        const message = emoji + " *" + label + "*\n\n📝 " + description + "\n\n📍 [View Location](" + mapLink + ")\n🗺️ Geohash: `" + geohash + "`\n⏰ " + new Date().toISOString();
+
+        // Send to Telegram
+        const url = "https://api.telegram.org/bot" + token + "/sendMessage";
+
+        const response = $http.send({
+            url: url,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: message,
+                parse_mode: "Markdown",
+                disable_web_page_preview: true
+            }),
+            timeout: 10
+        });
+
+        if (response.statusCode !== 200) {
+            console.log("Telegram API error:", response.raw);
+        } else {
+            console.log("Telegram notification sent for report " + e.record.id);
+        }
     } catch (err) {
         // Log but don't block the request
         console.log("Failed to send Telegram notification:", err.message);

@@ -7,11 +7,11 @@ class AppConfig {
 
   /// PocketBase server URL.
   /// 
-  /// For local development: 'http://127.0.0.1:8090'
+  /// For local development via Cloudflare tunnel
   /// For production: 'https://notice.yourcity.gov'
   static const String pocketbaseUrl = String.fromEnvironment(
     'POCKETBASE_URL',
-    defaultValue: 'http://127.0.0.1:8090',
+    defaultValue: 'https://epic-area-industry-clerk.trycloudflare.com',
   );
 
   /// Geohash precision for spatial indexing.

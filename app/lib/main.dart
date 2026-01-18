@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:app/services/pocketbase_service.dart';
 import 'package:app/screens/map_screen.dart';
 
 void main() {
@@ -34,47 +33,8 @@ class NoticeApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: FutureBuilder(
-        future: PocketbaseService.instance.initialize(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const _SplashScreen();
-          }
-          return const MapScreen();
-        },
-      ),
+      home: const MapScreen(),
     );
   }
 }
 
-class _SplashScreen extends StatelessWidget {
-  const _SplashScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '🧊',
-              style: TextStyle(fontSize: 64),
-            ),
-            SizedBox(height: 24),
-            Text(
-              'notICE',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
-              ),
-            ),
-            SizedBox(height: 16),
-            CircularProgressIndicator(),
-          ],
-        ),
-      ),
-    );
-  }
-}
