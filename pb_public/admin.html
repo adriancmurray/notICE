@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>notICE Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a1929;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    header h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+    .emoji { font-size: 32px; }
+    .card {
+      background: #132f4c;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #90caf9;
+    }
+    .field {
+      margin-bottom: 16px;
+    }
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: #90caf9;
+      margin-bottom: 4px;
+    }
+    .field input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #1e4976;
+      border-radius: 8px;
+      background: #0a1929;
+      color: #e0e0e0;
+      font-size: 14px;
+    }
+    .field input:focus {
+      outline: none;
+      border-color: #00bcd4;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+    .row .field { flex: 1; }
+    button {
+      background: #00bcd4;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover {
+      background: #00acc1;
+    }
+    button:disabled {
+      background: #1e4976;
+      cursor: not-allowed;
+    }
+    .success {
+      background: #1b5e20;
+      color: #a5d6a7;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .error {
+      background: #b71c1c;
+      color: #ffcdd2;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .access-denied {
+      text-align: center;
+      padding: 48px 24px;
+    }
+    .access-denied h1 {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .hint {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+    a {
+      color: #00bcd4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <!-- Loading state -->
+    <div id="loading" style="text-align: center; padding: 48px;">
+      <p>Checking access...</p>
+    </div>
+    
+    <!-- Access denied -->
+    <div id="denied" style="display: none;" class="access-denied">
+      <h1>🔒</h1>
+      <h2>Local Access Only</h2>
+      <p>This admin page is only accessible from the server itself.</p>
+      <p style="margin-top: 16px; font-size: 12px; color: #666;">
+        Access from: <code>http://localhost:8090/admin.html</code>
+      </p>
+    </div>
+    
+    <!-- Admin panel -->
+    <div id="admin" style="display: none;">
+      <header>
+        <span class="emoji">🧊</span>
+        <div>
+          <h1>notICE Admin</h1>
+          <p style="font-size: 12px; color: #666;">Server Configuration</p>
+        </div>
+      </header>
+      
+      <div id="successMsg" class="success">Settings saved!</div>
+      <div id="errorMsg" class="error"></div>
+      
+      <!-- Region Config -->
+      <div class="card">
+        <h2>📍 Region Configuration</h2>
+        <div class="field">
+          <label>Region Name</label>
+          <input type="text" id="regionName" placeholder="e.g., Idaho Falls, ID">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Latitude</label>
+            <input type="number" step="any" id="regionLat" placeholder="43.4926">
+          </div>
+          <div class="field">
+            <label>Longitude</label>
+            <input type="number" step="any" id="regionLong" placeholder="-112.0401">
+          </div>
+        </div>
+        <div class="field">
+          <label>Default Zoom Level</label>
+          <input type="number" id="regionZoom" value="14" min="10" max="18">
+          <p class="hint">10 = city view, 14 = neighborhood, 18 = street level</p>
+        </div>
+        <button onclick="saveRegion()">Save Region</button>
+      </div>
+      
+      <!-- Telegram Config -->
+      <div class="card">
+        <h2>📱 Telegram Notifications</h2>
+        <div class="field">
+          <label>Channel/Group Link</label>
+          <input type="url" id="telegramLink" placeholder="https://t.me/yourchannel">
+          <p class="hint">Users will see a "Join" button to subscribe to alerts</p>
+        </div>
+        <button onclick="saveTelegram()">Save Telegram</button>
+      </div>
+      
+      <!-- Quick Links -->
+      <div class="card">
+        <h2>🔗 Quick Links</h2>
+        <p style="margin-bottom: 12px;">
+          <a href="/_/" target="_blank">Full PocketBase Admin →</a>
+        </p>
+        <p style="margin-bottom: 12px;">
+          <a href="/" target="_blank">View App →</a>
+        </p>
+        <p>
+          <a href="/api/collections/reports/records" target="_blank">View Reports API →</a>
+        </p>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const API = '/api/collections/config/records';
+    let regionRecordId = null;
+    let telegramRecordId = null;
+    
+    // Check if accessing from localhost
+    function isLocalAccess() {
+      const host = window.location.hostname;
+      return host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.');
+    }
+    
+    async function init() {
+      if (!isLocalAccess()) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('denied').style.display = 'block';
+        return;
+      }
+      
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('admin').style.display = 'block';
+      
+      // Load existing config
+      await loadConfig();
+    }
+    
+    async function loadConfig() {
+      try {
+        const res = await fetch(API);
+        const data = await res.json();
+        
+        for (const record of data.items || []) {
+          if (record.key === 'region') {
+            regionRecordId = record.id;
+            const v = record.value;
+            if (v) {
+              document.getElementById('regionName').value = v.name || '';
+              document.getElementById('regionLat').value = v.lat || '';
+              document.getElementById('regionLong').value = v.long || '';
+              document.getElementById('regionZoom').value = v.zoom || 14;
+            }
+          } else if (record.key === 'telegram') {
+            telegramRecordId = record.id;
+            const v = record.value;
+            if (v && v.link) {
+              document.getElementById('telegramLink').value = v.link;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load config:', e);
+      }
+    }
+    
+    async function saveRegion() {
+      const data = {
+        key: 'region',
+        value: {
+          name: document.getElementById('regionName').value,
+          lat: parseFloat(document.getElementById('regionLat').value),
+          long: parseFloat(document.getElementById('regionLong').value),
+          zoom: parseInt(document.getElementById('regionZoom').value) || 14
+        }
+      };
+      
+      try {
+        if (regionRecordId) {
+          await fetch(`${API}/${regionRecordId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          const res = await fetch(API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          const record = await res.json();
+          regionRecordId = record.id;
+        }
+        showSuccess();
+      } catch (e) {
+        showError('Failed to save region: ' + e.message);
+      }
+    }
+    
+    async function saveTelegram() {
+      const data = {
+        key: 'telegram',
+        value: {
+          link: document.getElementById('telegramLink').value
+        }
+      };
+      
+      try {
+        if (telegramRecordId) {
+          await fetch(`${API}/${telegramRecordId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          const res = await fetch(API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          const record = await res.json();
+          telegramRecordId = record.id;
+        }
+        showSuccess();
+      } catch (e) {
+        showError('Failed to save telegram: ' + e.message);
+      }
+    }
+    
+    function showSuccess() {
+      const el = document.getElementById('successMsg');
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 3000);
+    }
+    
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 5000);
+    }
+    
+    init();
+  </script>
+</body>
+</html>
