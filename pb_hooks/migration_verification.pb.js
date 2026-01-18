@@ -7,12 +7,9 @@
  * Uses a one-time flag to avoid repeated checks.
  */
 
-// One-time migration flag
-let migrationDone = false;
-
 onRecordCreate((e) => {
-    // Only run migration once per server session
-    if (migrationDone || e.collection.name !== "reports") {
+    // Only process reports collection
+    if (e.collection.name !== "reports") {
         return;
     }
 
@@ -28,7 +25,10 @@ onRecordCreate((e) => {
             if (field.name === "disputes") hasDisputes = true;
         }
 
-        let needsSave = false;
+        // If both fields exist, nothing to do
+        if (hasConfirmations && hasDisputes) {
+            return;
+        }
 
         if (!hasConfirmations) {
             collection.fields.push({
@@ -37,7 +37,6 @@ onRecordCreate((e) => {
                 required: false,
                 min: 0,
             });
-            needsSave = true;
             console.log("Added confirmations field to reports collection");
         }
 
@@ -48,18 +47,12 @@ onRecordCreate((e) => {
                 required: false,
                 min: 0,
             });
-            needsSave = true;
             console.log("Added disputes field to reports collection");
         }
 
-        if (needsSave) {
-            $app.save(collection);
-            console.log("Reports collection updated with verification fields");
-        }
-
-        migrationDone = true;
+        $app.save(collection);
+        console.log("Reports collection updated with verification fields");
     } catch (err) {
         console.log("Could not update reports collection:", err);
-        migrationDone = true; // Don't keep retrying
     }
 });
