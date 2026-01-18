@@ -1,5 +1,7 @@
 # notICE 🧊
 
+![notICE](assets/banner.jpg)
+
 **A localized, decentralized safety alert system.**
 
 notICE allows a city or region to self-host a single server that citizens can connect to via a mobile app to report and view dangerous situations — **anonymously**.
