@@ -1,7 +1,10 @@
 FROM ghcr.io/muchobien/pocketbase:latest
 
-# Copy hooks
+# Copy PocketBase hooks (Telegram notifications, etc.)
 COPY pb_hooks /pb_hooks
+
+# Copy PWA static files (served at /)
+COPY pb_public /pb_public
 
 # Expose port
 EXPOSE 8090

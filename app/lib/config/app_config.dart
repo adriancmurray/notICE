@@ -2,17 +2,27 @@
 /// 
 /// In production, these values should come from environment variables
 /// or a build-time configuration system.
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class AppConfig {
   AppConfig._();
 
   /// PocketBase server URL.
   /// 
-  /// For local development via Cloudflare tunnel
-  /// For production: 'https://notice.yourcity.gov'
-  static const String pocketbaseUrl = String.fromEnvironment(
-    'POCKETBASE_URL',
-    defaultValue: 'https://epic-area-industry-clerk.trycloudflare.com',
-  );
+  /// When served from PocketBase on web, uses same origin (empty string).
+  /// Otherwise uses environment variable or default.
+  static String get pocketbaseUrl {
+    // On web, if POCKETBASE_URL is empty, use same origin (/)
+    if (kIsWeb) {
+      const envUrl = String.fromEnvironment('POCKETBASE_URL', defaultValue: '');
+      return envUrl.isEmpty ? '' : envUrl;
+    }
+    // On native platforms, require explicit URL
+    return const String.fromEnvironment(
+      'POCKETBASE_URL',
+      defaultValue: 'https://epic-area-industry-clerk.trycloudflare.com',
+    );
+  }
 
   /// Geohash precision for spatial indexing.
   /// 
