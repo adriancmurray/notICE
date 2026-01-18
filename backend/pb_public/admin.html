@@ -373,7 +373,7 @@
             const errorEl = document.getElementById('loginError');
 
             try {
-                const res = await fetch('/api/admins/auth-with-password', {
+                const res = await fetch('/api/collections/_superusers/auth-with-password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ identity: email, password })
@@ -409,7 +409,7 @@
             if (!adminToken) return false;
 
             try {
-                const res = await fetch('/api/admins/auth-refresh', {
+                const res = await fetch('/api/collections/_superusers/auth-refresh', {
                     method: 'POST',
                     headers: { 'Authorization': adminToken }
                 });
