@@ -114,8 +114,13 @@ echo "$PUSH_HANDLER" >> backend/pb_public/flutter_service_worker.js
 # Remove the standalone push-sw.js (no longer needed)
 rm -f backend/pb_public/push-sw.js
 
-# 5. Verify
+# 5. Sync to root pb_public (server serves from here)
+echo -e "${YELLOW}🔄 Syncing to root pb_public...${NC}"
+rm -rf pb_public/*
+cp -r backend/pb_public/* pb_public/
+
+# 6. Verify
 echo -e "${GREEN}✅ Deployment Complete!${NC}"
 echo -e "Build ID: ${TIMESTAMP}"
 echo -e "Push handler injected into flutter_service_worker.js"
-grep "notICE Push" backend/pb_public/flutter_service_worker.js | head -1
+grep "notICE Push" pb_public/flutter_service_worker.js | head -1

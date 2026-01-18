@@ -46,7 +46,7 @@ class _MapScreenState extends State<MapScreen> {
   String? _telegramLink; // Optional Telegram channel link from server
   StreamSubscription? _locationSubscription;
   bool _pushEnabled = false;
-  bool _pushSupported = true; // TEMP: Force to true for testing
+  bool _pushSupported = false;
 
   @override
   void initState() {
@@ -122,7 +122,7 @@ class _MapScreenState extends State<MapScreen> {
       final enabled = await PushNotificationService.instance.isEnabled();
       if (mounted) {
         setState(() {
-          // _pushSupported = supported;
+          _pushSupported = supported;
           _pushEnabled = enabled;
         });
       }

@@ -3,11 +3,11 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-const RESOURCES = {"flutter_bootstrap.js": "527c073d1ac2932f06e0d50172f56959",
+const RESOURCES = {"flutter_bootstrap.js": "536d44c8ecf27427fb1e97e960d06f64",
 "version.json": "7ef0093f2b3a91a39d213296dca796d7",
 "index.html": "ce43eb2cff0e1eef429b85b35ac733e1",
 "/": "ce43eb2cff0e1eef429b85b35ac733e1",
-"main.dart.js": "e0c42fe57ade80303ca3e071ffbe1997",
+"main.dart.js": "b21c91ad0f61d2b29e5da71212fbe722",
 "flutter.js": "888483df48293866f9f41d3d9274a779",
 "favicon.png": "7af78bf37f6efa9d532d083c5b2e8c80",
 "icons/Icon-192.png": "52b48c10c1dca7a4b844a8847b50afc0",
@@ -15,7 +15,6 @@ const RESOURCES = {"flutter_bootstrap.js": "527c073d1ac2932f06e0d50172f56959",
 "icons/Icon-maskable-512.png": "7055b2dd2e8cc62078bf6000e10f77c7",
 "icons/Icon-512.png": "7055b2dd2e8cc62078bf6000e10f77c7",
 "manifest.json": "3fc29f9294b755bca0378065b89e216e",
-"push-sw.js": "44a759312247ff36b6bc19f3066940b7",
 "assets/AssetManifest.json": "af236ac12b2f46aec036331dff11b999",
 "assets/NOTICES": "4efc6950ca839217c846f94e1f877f1c",
 "assets/FontManifest.json": "7b2a36307916a9721811788013e65289",
@@ -208,8 +207,8 @@ function onlineFirst(event) {
 }
 
 // === notICE Push Notification Handler (Injected) ===
-// VERSION: 2026-01-18-140057
-console.log('[Push SW] Service Worker Loaded v2026-01-18-140057');
+// VERSION: 2026-01-18-142354
+console.log('[Push SW] Service Worker Loaded v2026-01-18-142354');
 
 self.addEventListener('push', function (event) {
     console.log('[Push SW] Push received:', event);
@@ -240,7 +239,7 @@ self.addEventListener('push', function (event) {
             url: data.url,
             id: data.id
         },
-        requireInteraction: true
+        requireInteraction: false
     };
 
     event.waitUntil(

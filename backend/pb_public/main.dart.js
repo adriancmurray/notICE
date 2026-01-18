@@ -7712,7 +7712,7 @@ _.y=g
 _.z=null
 _.Q=24
 _.at=_.as=null
-_.ax=!1
+_.ay=_.ax=!1
 _.c=_.a=null},
 and:function and(a,b){this.a=a
 this.b=b},
@@ -7720,8 +7720,9 @@ ane:function ane(a,b){this.a=a
 this.b=b},
 anf:function anf(a,b){this.a=a
 this.b=b},
-ang:function ang(a,b){this.a=a
-this.b=b},
+ang:function ang(a,b,c){this.a=a
+this.b=b
+this.c=c},
 anq:function anq(a,b){this.a=a
 this.b=b},
 anh:function anh(a,b){this.a=a
@@ -41039,8 +41040,8 @@ ak(){return new A.DN(A.aLx(null,null),$.aFi(),$.aFR(),$.axy(),B.G6,A.aC(t.N),A.c
 A.DN.prototype={
 av(){this.aT()
 this.jd()},
-jd(){var s=0,r=A.C(t.H),q=1,p=[],o=this,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6
-var $async$jd=A.D(function(a7,a8){if(a7===1){p.push(a8)
+jd(){var s=0,r=A.C(t.H),q=1,p=[],o=this,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7
+var $async$jd=A.D(function(a8,a9){if(a8===1){p.push(a9)
 s=q}while(true)switch(s){case 0:q=3
 s=6
 return A.q(o.f.dV(),$async$jd)
@@ -41048,8 +41049,8 @@ case 6:q=1
 s=5
 break
 case 3:q=2
-a0=p.pop()
-n=A.a0(a0)
+a1=p.pop()
+n=A.a0(a1)
 A.id().$1("PocketBase init error: "+A.k(n))
 s=5
 break
@@ -41058,26 +41059,26 @@ break
 case 5:q=8
 s=11
 return A.q(o.e.r5(),$async$jd)
-case 11:m=a8
+case 11:m=a9
 if(o.c!=null)o.a5(new A.and(o,m))
 q=1
 s=10
 break
 case 8:q=7
-a1=p.pop()
-l=A.a0(a1)
+a2=p.pop()
+l=A.a0(a2)
 A.id().$1("Location service error: "+A.k(l))
 q=13
 s=16
 return A.q(o.f.zH(),$async$jd)
-case 16:k=a8
+case 16:k=a9
 if(k!=null&&o.c!=null)o.a5(new A.ane(o,k))
 q=7
 s=15
 break
 case 13:q=12
-a2=p.pop()
-j=A.a0(a2)
+a3=p.pop()
+j=A.a0(a3)
 A.id().$1("Failed to fetch region config: "+A.k(j))
 s=15
 break
@@ -41090,31 +41091,31 @@ break
 case 10:q=18
 s=21
 return A.q(o.f.zI(),$async$jd)
-case 21:i=a8
+case 21:i=a9
 if(i!=null&&o.c!=null)o.a5(new A.anf(o,i))
 q=1
 s=20
 break
 case 18:q=17
-a3=p.pop()
-h=A.a0(a3)
+a4=p.pop()
+h=A.a0(a4)
 A.id().$1("Failed to fetch Telegram link: "+A.k(h))
 s=20
 break
 case 17:s=1
 break
-case 20:b=o.e
-a=b.b
-o.at=new A.cd(a,A.j(a).i("cd<1>")).eb(o.gadD())
+case 20:a=o.e
+a0=a.b
+o.at=new A.cd(a0,A.j(a0).i("cd<1>")).eb(o.gadD())
 q=23
 s=26
-return A.q(b.wv(),$async$jd)
+return A.q(a.wv(),$async$jd)
 case 26:q=1
 s=25
 break
 case 23:q=22
-a4=p.pop()
-g=A.a0(a4)
+a5=p.pop()
+g=A.a0(a5)
 A.id().$1("Failed to start location tracking: "+A.k(g))
 s=25
 break
@@ -41127,30 +41128,31 @@ case 31:q=1
 s=30
 break
 case 28:q=27
-a5=p.pop()
-f=A.a0(a5)
+a6=p.pop()
+f=A.a0(a6)
 A.id().$1("Failed to update subscriptions: "+A.k(f))
 s=30
 break
 case 27:s=1
 break
-case 30:b=o.f.d
-o.z=new A.cd(b,A.j(b).i("cd<1>")).eb(o.gadH())
+case 30:a=o.f.d
+o.z=new A.cd(a,A.j(a).i("cd<1>")).eb(o.gadH())
 q=33
-b=$.auh()
+a=$.auh()
 s=36
-return A.q(b.dV(),$async$jd)
-case 36:s=37
-return A.q(b.Au(),$async$jd)
-case 37:e=a8
-if(o.c!=null)o.a5(new A.ang(o,e))
+return A.q(a.dV(),$async$jd)
+case 36:e=a.b
+s=37
+return A.q(a.Au(),$async$jd)
+case 37:d=a9
+if(o.c!=null)o.a5(new A.ang(o,e,d))
 q=1
 s=35
 break
 case 33:q=32
-a6=p.pop()
-d=A.a0(a6)
-A.id().$1("Push notification init error: "+A.k(d))
+a7=p.pop()
+c=A.a0(a7)
+A.id().$1("Push notification init error: "+A.k(c))
 s=35
 break
 case 32:s=1
@@ -41284,7 +41286,7 @@ s=A.T(a).ax
 n=s.rx
 s=A.c([B.Uw,B.lc,A.rR(A.on(A.c([B.Uo,A.cH(""+q+" reports in area",i,i,i,A.eL(i,i,n==null?s.k3:n,i,i,i,i,i,i,i,i,12,i,i,i,i,i,!0,i,i,i,i,i,i,i,i),i,i)],o),B.bW,B.b5))],o)
 if(j.as!=null)B.b.O(s,A.c([A.kw(i,A.iq(i,B.N6,B.C,i,new A.dk(B.iV.j1(0.2),i,i,A.fz(8),i,i,B.aN),i,i,i,B.fX,i,i,i),B.ae,!1,i,i,i,i,i,i,i,i,i,i,i,i,i,new A.anw(j),i,i,i,i,i,i),B.dX],o))
-q=j.ax?B.hy.j1(0.2):B.ko.j1(0.2)
+if(j.ay){q=j.ax?B.hy.j1(0.2):B.ko.j1(0.2)
 n=A.fz(8)
 m=j.ax
 l=m?B.Fe:B.Ff
@@ -41292,8 +41294,7 @@ l=A.azF(l,m?B.hy:B.ko,i,16)
 k=m?"Alerts":"Enable"
 l=A.c([l,B.ld,A.cH(k,i,i,i,A.eL(i,i,m?B.hy:B.ko,i,i,i,i,i,i,i,i,10,i,i,B.bg,i,i,!0,i,i,i,i,i,i,i,i),i,i)],o)
 if(j.ax)B.b.O(l,A.c([B.dX,A.aw4(B.Un,new A.anx(),A.aw5(i,i,i,i,i,i,i,i,i,i,i,B.y,B.cB,i,i,i,i,B.uq,i,i))],o))
-B.b.O(s,A.c([A.kw(i,A.iq(i,A.hT(l,B.ar,B.b5,0),B.C,i,new A.dk(q,i,i,n,i,i,B.aN),i,i,i,B.fX,i,i,i),B.ae,!1,i,i,i,i,i,i,i,i,i,i,i,i,i,j.gahX(),i,i,i,i,i,i),B.dX],o))
-s.push(A.iq(i,B.N5,B.C,i,new A.dk(B.dx.j1(0.2),i,i,A.fz(8),i,i,B.aN),i,i,i,B.fX,i,i,i))
+B.b.O(s,A.c([A.kw(i,A.iq(i,A.hT(l,B.ar,B.b5,0),B.C,i,new A.dk(q,i,i,n,i,i,B.aN),i,i,i,B.fX,i,i,i),B.ae,!1,i,i,i,i,i,i,i,i,i,i,i,i,i,j.gahX(),i,i,i,i,i,i),B.dX],o))}s.push(A.iq(i,B.N5,B.C,i,new A.dk(B.dx.j1(0.2),i,i,A.fz(8),i,i,B.aN),i,i,i,B.fX,i,i,i))
 s=A.hT(s,B.ar,B.bk,0)
 q=B.JY.gi1()
 return new A.AE(A.iR(B.bS,A.c([new A.yd(p,new A.tk(h,14,10,18),j.d,i),A.tE(i,new A.HX(new A.cb(B.Ey,A.on(A.c([s,B.z5,new A.Nj(B.aE,A.hT(q.hw(q,new A.any(j,a),t.iF).eH(0),B.ar,B.bk,0),i)],o),B.bt,B.b5),i),i),i,i,16,16,r.r.b+8,i),A.tE(100,new A.rT(B.Fk,"location",j.ga4N(),i,!1,B.WN,i,i),i,i,i,16,i,i)],o),B.F,B.bz),new A.rT(B.Fn,B.BT,j.gah9(),B.bN,!0,B.zR,B.Ut,i),B.mz,i)},
@@ -41312,7 +41313,9 @@ A.anf.prototype={
 $0(){return this.a.as=this.b},
 $S:0}
 A.ang.prototype={
-$0(){this.a.ax=this.b},
+$0(){var s=this.a
+s.ay=this.b
+s.ax=this.c},
 $S:0}
 A.anq.prototype={
 $0(){var s=this.a.y
@@ -42005,7 +42008,7 @@ if(k!=null){h=k.scriptURL
 g=J.bf(h)
 f=g.gF(h)
 if(0>f)A.W(A.c1(0,0,g.gF(h),null,null))
-h=A.axm(h,"push-sw.js",0)}else h=!1
+h=A.axm(h,"flutter_service_worker.js",0)}else h=!1
 if(h){q=l
 s=1
 break $async$outer}}s=8

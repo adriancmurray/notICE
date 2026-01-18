@@ -254,7 +254,7 @@ class PushNotificationService {
       final registrations = await sw.getRegistrations().toDart;
       for (final reg in registrations.toDart) {
         final active = reg.active;
-        if (active != null && active.scriptURL.contains('push-sw.js')) {
+        if (active != null && active.scriptURL.contains('flutter_service_worker.js')) {
           return reg;
         }
       }

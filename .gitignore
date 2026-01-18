@@ -32,3 +32,18 @@ app/*.log
 **/secrets/
 *.pem
 *.key
+
+# Custom binary (build on deploy)
+pocketbase_vapid
+
+# Generated databases
+backend/auxiliary.db
+backend/data.db
+backend/pb_data/
+
+# Build outputs (synced from app/build/web)
+pb_public/
+backend/pb_public/
+
+# VAPID keys (generated at runtime)
+backend/vapid_keys.json
