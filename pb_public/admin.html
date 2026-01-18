@@ -241,6 +241,16 @@
                 <button onclick="saveTelegram()">Save Telegram</button>
             </div>
 
+            <!-- Report Management -->
+            <div class="card">
+                <h2>🗂️ Manage Reports</h2>
+                <p class="hint" style="margin-bottom: 12px;">Recent reports. Delete fake or spam reports.</p>
+                <div id="reportsList" style="max-height: 300px; overflow-y: auto;">
+                    <p style="text-align: center; color: #666;">Loading reports...</p>
+                </div>
+                <button onclick="loadReports()" style="margin-top: 12px;">Refresh Reports</button>
+            </div>
+
             <!-- Quick Links -->
             <div class="card">
                 <h2>🔗 Quick Links</h2>
@@ -370,6 +380,9 @@
             document.getElementById('regionLat').addEventListener('change', updateMapFromInputs);
             document.getElementById('regionLong').addEventListener('change', updateMapFromInputs);
             document.getElementById('regionZoom').addEventListener('change', updateMapFromInputs);
+
+            // Load reports for management
+            await loadReports();
         }
 
         async function loadConfig() {
@@ -474,6 +487,68 @@
             el.textContent = msg;
             el.style.display = 'block';
             setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        const REPORTS_API = '/api/collections/reports/records';
+
+        async function loadReports() {
+            const container = document.getElementById('reportsList');
+            container.innerHTML = '<p style="text-align: center; color: #666;">Loading...</p>';
+
+            try {
+                const res = await fetch(`${REPORTS_API}?sort=-created&perPage=20`);
+                const data = await res.json();
+
+                if (!data.items || data.items.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #666;">No reports yet</p>';
+                    return;
+                }
+
+                container.innerHTML = data.items.map(report => {
+                    const emoji = report.type === 'danger' ? '🚨' : report.type === 'warning' ? '⚠️' : '✅';
+                    const time = formatTimeAgo(new Date(report.created));
+                    const conf = report.confirmations || 0;
+                    const disp = report.disputes || 0;
+
+                    return `
+                        <div style="display: flex; align-items: center; padding: 12px; background: #0a1929; border-radius: 8px; margin-bottom: 8px;">
+                            <span style="font-size: 20px; margin-right: 12px;">${emoji}</span>
+                            <div style="flex: 1;">
+                                <div style="font-size: 14px;">${report.description || 'No description'}</div>
+                                <div style="font-size: 11px; color: #666;">${time} • ✅${conf} ❌${disp}</div>
+                            </div>
+                            <button onclick="deleteReport('${report.id}')" style="width: auto; padding: 8px 12px; font-size: 12px; background: #b71c1c;">
+                                Delete
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                container.innerHTML = '<p style="color: #ffcdd2;">Failed to load reports</p>';
+            }
+        }
+
+        async function deleteReport(id) {
+            if (!confirm('Delete this report? This cannot be undone.')) return;
+
+            try {
+                await fetch(`${REPORTS_API}/${id}`, { method: 'DELETE' });
+                showSuccess();
+                await loadReports();
+            } catch (e) {
+                showError('Failed to delete report: ' + e.message);
+            }
+        }
+
+        function formatTimeAgo(date) {
+            const diff = Date.now() - date.getTime();
+            const mins = Math.floor(diff / 60000);
+            if (mins < 1) return 'just now';
+            if (mins < 60) return `${mins}m ago`;
+            const hours = Math.floor(mins / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
         }
 
         init();

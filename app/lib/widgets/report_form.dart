@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:app/models/report.dart';
+import 'package:app/services/rate_limit_service.dart';
 
 /// Form for submitting a new report.
 class ReportForm extends StatefulWidget {
@@ -18,17 +19,51 @@ class ReportForm extends StatefulWidget {
 }
 
 class _ReportFormState extends State<ReportForm> {
+  final _rateLimitService = RateLimitService.instance;
   ReportType _selectedType = ReportType.warning;
   final _descriptionController = TextEditingController();
   bool _isSubmitting = false;
+  Duration? _cooldownRemaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRateLimit();
+  }
+
+  Future<void> _checkRateLimit() async {
+    final remaining = await _rateLimitService.getRemainingCooldown();
+    if (remaining > Duration.zero && mounted) {
+      setState(() => _cooldownRemaining = remaining);
+    }
+  }
 
   Future<void> _submit() async {
+    // Check rate limit
+    final canSubmit = await _rateLimitService.canSubmitReport();
+    if (!canSubmit) {
+      final remaining = await _rateLimitService.getRemainingCooldown();
+      if (mounted) {
+        setState(() => _cooldownRemaining = remaining);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please wait ${remaining.inMinutes} minutes before submitting another report'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     await widget.onSubmit(
       _selectedType,
       _descriptionController.text.isEmpty ? null : _descriptionController.text,
     );
+
+    // Record submission time
+    await _rateLimitService.recordReportSubmission();
 
     if (mounted) {
       Navigator.of(context).pop();

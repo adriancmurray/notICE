@@ -50,6 +50,8 @@ class Report {
   final double lat;
   final double long;
   final DateTime created;
+  final int confirmations;
+  final int disputes;
 
   const Report({
     required this.id,
@@ -59,6 +61,8 @@ class Report {
     required this.lat,
     required this.long,
     required this.created,
+    this.confirmations = 0,
+    this.disputes = 0,
   });
 
   /// Parse from PocketBase record.
@@ -74,6 +78,8 @@ class Report {
       lat: record.getDoubleValue('lat'),
       long: record.getDoubleValue('long'),
       created: DateTime.tryParse(record.getStringValue('created')) ?? DateTime.now(),
+      confirmations: record.getIntValue('confirmations'),
+      disputes: record.getIntValue('disputes'),
     );
   }
 
@@ -85,8 +91,16 @@ class Report {
       'description': description,
       'lat': lat,
       'long': long,
+      'confirmations': confirmations,
+      'disputes': disputes,
     };
   }
+
+  /// Whether this report is disputed (2+ disputes)
+  bool get isDisputed => disputes >= 2;
+
+  /// Credibility score based on confirmations vs disputes
+  int get credibilityScore => confirmations - disputes;
 
   /// Time since report was created.
   String get timeAgo {

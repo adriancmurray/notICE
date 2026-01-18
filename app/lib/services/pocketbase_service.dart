@@ -161,6 +161,35 @@ class PocketbaseService {
     return Report.fromRecord(record);
   }
 
+  /// Confirm a report (increment confirmations count).
+  Future<void> confirmReport(String reportId) async {
+    // Fetch current report to get current count
+    final record = await _pb.collection('reports').getOne(reportId);
+    final currentConfirmations = record.getIntValue('confirmations');
+    
+    await _pb.collection('reports').update(
+      reportId,
+      body: {'confirmations': currentConfirmations + 1},
+    );
+  }
+
+  /// Dispute a report (increment disputes count).
+  Future<void> disputeReport(String reportId) async {
+    // Fetch current report to get current count
+    final record = await _pb.collection('reports').getOne(reportId);
+    final currentDisputes = record.getIntValue('disputes');
+    
+    await _pb.collection('reports').update(
+      reportId,
+      body: {'disputes': currentDisputes + 1},
+    );
+  }
+
+  /// Delete a report (admin only).
+  Future<void> deleteReport(String reportId) async {
+    await _pb.collection('reports').delete(reportId);
+  }
+
   /// Dispose resources.
   void dispose() {
     unsubscribeFromGeohashes();
