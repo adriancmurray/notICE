@@ -29,6 +29,17 @@ class _MapScreenState extends State<MapScreen> {
   Set<String> _subscribedGeohashes = {};
   final List<Report> _reports = [];
   StreamSubscription? _reportsSubscription;
+  
+  // Time filter options (in hours)
+  static const _timeFilterOptions = {
+    1: '1h',
+    6: '6h',
+    24: '24h',
+    72: '3d',
+    168: '7d',
+    0: 'All',
+  };
+  int _selectedTimeFilter = 24; // Default to 24 hours
   StreamSubscription? _locationSubscription;
 
   @override
@@ -100,9 +111,10 @@ class _MapScreenState extends State<MapScreen> {
         _subscribedGeohashes.difference(newGeohashes).isNotEmpty) {
       _subscribedGeohashes = newGeohashes;
 
-      // Fetch existing reports
+      // Fetch existing reports with time filter
       final reports = await _pocketbaseService.fetchReports(
         geohashes: _subscribedGeohashes,
+        sinceHours: _selectedTimeFilter == 0 ? 8760 : _selectedTimeFilter, // 0 = all (1 year)
       );
 
       setState(() {
@@ -148,7 +160,24 @@ class _MapScreenState extends State<MapScreen> {
 
   void _centerOnLocation() {
     _mapController.move(_currentLocation, AppConfig.defaultZoom);
+  }
+
+  /// Refresh reports with current time filter
+  Future<void> _refreshReports() async {
+    if (_subscribedGeohashes.isEmpty) return;
+    
+    final reports = await _pocketbaseService.fetchReports(
+      geohashes: _subscribedGeohashes,
+      sinceHours: _selectedTimeFilter == 0 ? 8760 : _selectedTimeFilter,
+    );
+    
+    if (mounted) {
+      setState(() {
+        _reports.clear();
+        _reports.addAll(reports);
+      });
     }
+  }
 
   void _showReportForm() {
     showModalBottomSheet(
@@ -270,59 +299,93 @@ class _MapScreenState extends State<MapScreen> {
             right: 16,
             child: Card(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: Row(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('🧊', style: TextStyle(fontSize: 20)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'notICE',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+                    Row(
+                      children: [
+                        const Text('🧊', style: TextStyle(fontSize: 20)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'notICE',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text(
+                                '${_reports.length} reports in area',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            '${_reports.length} reports in area',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              fontSize: 12,
-                            ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
                           ),
-                        ],
-                      ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.circle, size: 8, color: Colors.green),
+                              SizedBox(width: 4),
+                              Text(
+                                'LIVE',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.circle, size: 8, color: Colors.green),
-                          SizedBox(width: 4),
-                          Text(
-                            'LIVE',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
+                    const SizedBox(height: 8),
+                    // Time filter chips
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: _timeFilterOptions.entries.map((entry) {
+                          final isSelected = _selectedTimeFilter == entry.key;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(entry.value),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() => _selectedTimeFilter = entry.key);
+                                  _refreshReports();
+                                }
+                              },
+                              selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                              showCheckmark: false,
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              labelStyle: TextStyle(
+                                fontSize: 12,
+                                color: isSelected 
+                                    ? Theme.of(context).colorScheme.onPrimaryContainer
+                                    : null,
+                              ),
                             ),
-                          ),
-                        ],
+                          );
+                        }).toList(),
                       ),
                     ),
                   ],

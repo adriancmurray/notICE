@@ -53,11 +53,22 @@ class PocketbaseService {
   }
 
   /// Fetch recent reports for a set of geohashes.
+  /// 
+  /// [sinceHours] filters to reports created within the last N hours.
+  /// Default is 24 hours.
   Future<List<Report>> fetchReports({
     required Set<String> geohashes,
     int limit = 50,
+    int sinceHours = 24,
   }) async {
-    final filter = _geohashService.buildGeohashFilter(geohashes);
+    final geohashFilter = _geohashService.buildGeohashFilter(geohashes);
+    
+    // Calculate cutoff time
+    final cutoff = DateTime.now().toUtc().subtract(Duration(hours: sinceHours));
+    final timeFilter = 'created >= "${cutoff.toIso8601String()}"';
+    
+    // Combine filters
+    final filter = '($geohashFilter) && $timeFilter';
     
     final records = await _pb.collection('reports').getList(
       page: 1,
