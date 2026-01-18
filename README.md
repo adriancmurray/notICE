@@ -60,30 +60,48 @@ notICE/
 └── README.md
 ```
 
-## Quick Start
+## Quick Start (3 Steps)
 
-### Backend
-
-```bash
-# Download PocketBase for your platform
-# https://pocketbase.io/docs/
-
-# Copy the hooks
-cp -r backend/pb_hooks ./pb_hooks
-
-# Import the schema (on first run)
-./pocketbase serve
-
-# Schema can be imported via Admin UI > Settings > Import collections
-```
-
-### App
+### 1. Get the code
 
 ```bash
-cd app
-flutter pub get
-flutter run
+git clone https://github.com/adriancmurray/notICE
+cd notICE
 ```
+
+### 2. Run the setup wizard
+
+```bash
+./setup.sh
+```
+
+This will ask for:
+- Your city/region name
+- Map coordinates (get from Google Maps)
+- Telegram bot token (optional, for push notifications)
+
+### 3. Done! 
+
+Your server is running at `http://localhost:8090`
+
+**First time setup:** Open `http://localhost:8090/_/` to create an admin account.
+
+---
+
+## Manual Docker Setup
+
+If you prefer to configure manually:
+
+```bash
+# Copy and edit the config
+cp .env.example .env
+nano .env  # Add your settings
+
+# Start the server
+docker compose up -d
+```
+
+
 
 ## Configuration
 

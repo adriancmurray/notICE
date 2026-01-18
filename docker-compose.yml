@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  pocketbase:
+    image: ghcr.io/muchobien/pocketbase:latest
+    container_name: notice-server
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./pb_data:/pb_data
+      - ./pb_hooks:/pb_hooks
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+    command: serve --http=0.0.0.0:8090
+
+  # Optional: Cloudflare tunnel for public HTTPS access
+  # Uncomment if you want automatic public URL
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: notice-tunnel
+  #   restart: unless-stopped
+  #   command: tunnel --url http://pocketbase:8090
+  #   depends_on:
+  #     - pocketbase
