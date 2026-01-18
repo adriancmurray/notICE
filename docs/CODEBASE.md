@@ -153,22 +153,20 @@ Prevents vote gaming (1 vote per device per report):
 
 ### 2. PocketBase Hooks (`pb_hooks/`)
 
-#### `telegram.pb.js`
+#### `telegram.pb.js` (Active)
 Fires on `onRecordCreateRequest` for "reports" collection:
-1. Gets TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID from env
-2. Formats message with emoji, description, map link
-3. POSTs to Telegram Bot API
+1. Calls `e.next()` first to save the record
+2. Gets TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID from env
+3. Formats message with emoji, description, map link
+4. POSTs to Telegram Bot API (non-blocking)
 
-#### `init.pb.js`
-Runs on `onAfterBootstrap`:
-- Reads REGION_* env vars
-- Creates/updates config record in database
-- Enables zero-config Docker deployment
+**Required env vars:**
+- `TELEGRAM_BOT_TOKEN` — From @BotFather
+- `TELEGRAM_CHAT_ID` — Channel/group ID (negative number for groups)
 
-#### `migration_verification.pb.js`
-Auto-adds fields on first report creation:
-- `confirmations` (number)
-- `disputes` (number)
+#### Other hooks (Templates only)
+- `init.pb.js` — Auto-config from env vars (optional)
+- `migration_verification.pb.js` — Removed (was causing issues)
 
 ---
 
