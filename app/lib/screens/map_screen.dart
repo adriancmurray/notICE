@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:app/config/app_config.dart';
 import 'package:app/models/report.dart';
 import 'package:app/services/location_service.dart';
@@ -40,6 +41,7 @@ class _MapScreenState extends State<MapScreen> {
     0: 'All',
   };
   int _selectedTimeFilter = 24; // Default to 24 hours
+  String? _telegramLink; // Optional Telegram channel link from server
   StreamSubscription? _locationSubscription;
 
   @override
@@ -78,6 +80,16 @@ class _MapScreenState extends State<MapScreen> {
       } catch (e2) {
         debugPrint('Failed to fetch region config: $e2');
       }
+    }
+
+    // Fetch Telegram link (if configured)
+    try {
+      final link = await _pocketbaseService.fetchTelegramLink();
+      if (link != null && mounted) {
+        setState(() => _telegramLink = link);
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch Telegram link: $e');
     }
 
     // Subscribe to location updates
@@ -329,6 +341,38 @@ class _MapScreenState extends State<MapScreen> {
                             ],
                           ),
                         ),
+                        // Telegram button (if configured)
+                        if (_telegramLink != null) ...[
+                          GestureDetector(
+                            onTap: () => launchUrl(Uri.parse(_telegramLink!)),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0088CC).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.telegram, size: 16, color: Color(0xFF0088CC)),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Join',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0088CC),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,

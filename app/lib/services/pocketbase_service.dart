@@ -52,6 +52,29 @@ class PocketbaseService {
     return null;
   }
 
+  /// Fetch the Telegram channel link from the server.
+  /// 
+  /// Returns the link (e.g., "https://t.me/noticeidahofalls") or null if not configured.
+  Future<String?> fetchTelegramLink() async {
+    try {
+      final records = await _pb.collection('config').getList(
+        page: 1,
+        perPage: 1,
+        filter: 'key = "telegram"',
+      );
+
+      if (records.items.isNotEmpty) {
+        final value = records.items.first.data['value'];
+        if (value is Map<String, dynamic> && value['link'] != null) {
+          return value['link'] as String;
+        }
+      }
+    } catch (e) {
+      // Config not available
+    }
+    return null;
+  }
+
   /// Fetch recent reports for a set of geohashes.
   /// 
   /// [sinceHours] filters to reports created within the last N hours.
