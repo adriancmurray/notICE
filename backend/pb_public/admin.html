@@ -204,7 +204,12 @@
                     <input type="text" id="regionName" placeholder="e.g., Idaho Falls, ID">
                 </div>
 
-                <p class="map-hint">Click on the map to set location, or enter coordinates below:</p>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <p class="map-hint" style="margin: 0;">Click on the map to set location:</p>
+                    <button type="button" onclick="locateMe()" style="width: auto; padding: 8px 12px; font-size: 12px;">
+                        📍 Locate Me
+                    </button>
+                </div>
                 <div id="map"></div>
 
                 <div class="row">
@@ -311,6 +316,35 @@
                     marker = L.marker([lat, lng]).addTo(map);
                 }
             }
+        }
+
+        function locateMe() {
+            if (!navigator.geolocation) {
+                showError('Geolocation is not supported by your browser');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    document.getElementById('regionLat').value = lat.toFixed(6);
+                    document.getElementById('regionLong').value = lng.toFixed(6);
+
+                    if (map) {
+                        map.setView([lat, lng], 14);
+                        if (marker) {
+                            marker.setLatLng([lat, lng]);
+                        } else {
+                            marker = L.marker([lat, lng]).addTo(map);
+                        }
+                    }
+                },
+                (error) => {
+                    showError('Unable to get location: ' + error.message);
+                }
+            );
         }
 
         async function init() {
