@@ -1,8 +1,11 @@
 /// <reference path="../pb_data/types.d.ts" />
 migrate((app) => {
   const collection = new Collection({
-    "createRule": null,
-    "deleteRule": null,
+    "createRule": "",       // Public: anyone can submit reports (anonymous)
+    "deleteRule": null,     // Admin only
+    "updateRule": "",       // Public: for confirm/dispute voting
+    "listRule": "",         // Public: anyone can view reports
+    "viewRule": "",         // Public: anyone can view reports
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
@@ -87,6 +90,44 @@ migrate((app) => {
       },
       {
         "hidden": false,
+        "id": "number_confirmations",
+        "max": null,
+        "min": 0,
+        "name": "confirmations",
+        "onlyInt": true,
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "number"
+      },
+      {
+        "hidden": false,
+        "id": "number_disputes",
+        "max": null,
+        "min": 0,
+        "name": "disputes",
+        "onlyInt": true,
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "number"
+      },
+      {
+        "autogeneratePattern": "",
+        "hidden": true,
+        "id": "text_device_fingerprint",
+        "max": 64,
+        "min": 0,
+        "name": "device_fingerprint",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
+        "hidden": false,
         "id": "autodate2990389176",
         "name": "created",
         "onCreate": true,
@@ -107,13 +148,15 @@ migrate((app) => {
       }
     ],
     "id": "pbc_1615648943",
-    "indexes": [],
-    "listRule": null,
+    "indexes": [
+      "CREATE INDEX idx_reports_geohash ON reports (geohash)",
+      "CREATE INDEX idx_reports_type ON reports (type)",
+      "CREATE INDEX idx_reports_created ON reports (created DESC)",
+      "CREATE INDEX idx_reports_fingerprint ON reports (device_fingerprint)"
+    ],
     "name": "reports",
     "system": false,
-    "type": "base",
-    "updateRule": null,
-    "viewRule": null
+    "type": "base"
   });
 
   return app.save(collection);

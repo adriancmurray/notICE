@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
 import 'package:http/http.dart' as http;
@@ -308,7 +307,7 @@ class PushNotificationService {
       }
 
       web.console.error('[notICE] Push Subscription failed: $e'.toJS);
-      throw e;
+      rethrow;
     }
   }
 
@@ -359,7 +358,7 @@ class PushNotificationService {
       }
     } catch (e) {
       web.console.error('Backend send error: $e'.toJS);
-      throw e; // Propagate to enableNotifications
+      rethrow; // Propagate to enableNotifications
     }
   }
 

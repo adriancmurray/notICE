@@ -148,7 +148,9 @@ class PocketbaseService {
     required ReportType type,
     String? description,
   }) async {
-    final geohash = _geohashService.encode(lat, long);
+    // Use precision 6 for storage (schema requires >= 6 chars)
+    // Filter queries use precision 5 for wider matching
+    final geohash = _geohashService.encode(lat, long, precision: 6);
     
     // Get device fingerprint for server-side rate limiting
     final fingerprint = await DeviceFingerprintService.instance.getFingerprint();

@@ -3,11 +3,11 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-const RESOURCES = {"flutter_bootstrap.js": "536d44c8ecf27427fb1e97e960d06f64",
+const RESOURCES = {"flutter_bootstrap.js": "0663e1e4dbe335bdd64397da55efb61a",
 "version.json": "7ef0093f2b3a91a39d213296dca796d7",
 "index.html": "ce43eb2cff0e1eef429b85b35ac733e1",
 "/": "ce43eb2cff0e1eef429b85b35ac733e1",
-"main.dart.js": "b21c91ad0f61d2b29e5da71212fbe722",
+"main.dart.js": "10d9419524350f4fa2b5ad4249725471",
 "flutter.js": "888483df48293866f9f41d3d9274a779",
 "favicon.png": "7af78bf37f6efa9d532d083c5b2e8c80",
 "icons/Icon-192.png": "52b48c10c1dca7a4b844a8847b50afc0",
@@ -207,8 +207,8 @@ function onlineFirst(event) {
 }
 
 // === notICE Push Notification Handler (Injected) ===
-// VERSION: 2026-01-18-142354
-console.log('[Push SW] Service Worker Loaded v2026-01-18-142354');
+// VERSION: 2026-01-18-162535
+console.log('[Push SW] Service Worker Loaded v2026-01-18-162535');
 
 self.addEventListener('push', function (event) {
     console.log('[Push SW] Push received:', event);

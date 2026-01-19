@@ -1,8 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 /// Configuration for the notICE app.
-/// 
+///
 /// In production, these values should come from environment variables
 /// or a build-time configuration system.
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AppConfig {
   AppConfig._();
@@ -26,9 +27,9 @@ class AppConfig {
 
   /// Geohash precision for spatial indexing.
   /// 
+  /// Precision 5 = ~4.9km x 4.9km cells (better for IP-based desktop validation)
   /// Precision 6 = ~1.2km x 0.6km cells
-  /// Precision 7 = ~150m x 150m cells
-  static const int geohashPrecision = 6;
+  static const int geohashPrecision = 5;
 
   /// Default map center (fallback if location unavailable).
   /// 

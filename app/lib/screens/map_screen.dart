@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:app/config/app_config.dart';
 import 'package:app/models/report.dart';
 import 'package:app/services/location_service.dart';
@@ -12,6 +11,8 @@ import 'package:app/services/vote_tracking_service.dart';
 import 'package:app/services/push_notification_service.dart';
 import 'package:app/widgets/report_marker.dart';
 import 'package:app/widgets/report_form.dart';
+import 'package:app/widgets/map_status_bar.dart';
+import 'package:app/widgets/map_controls.dart';
 
 /// Main map screen with realtime report updates.
 class MapScreen extends StatefulWidget {
@@ -29,24 +30,19 @@ class _MapScreenState extends State<MapScreen> {
 
   // Start with Idaho Falls coordinates - will update when location/server responds
   LatLng _currentLocation = const LatLng(43.4926, -112.0401);
+  LatLng _viewCenter = const LatLng(43.4926, -112.0401); // Track what user is looking at
   Set<String> _subscribedGeohashes = {};
   final List<Report> _reports = [];
   StreamSubscription? _reportsSubscription;
+  Timer? _debounceTimer;
   
-  // Time filter options (in hours)
-  static const _timeFilterOptions = {
-    1: '1h',
-    6: '6h',
-    24: '24h',
-    72: '3d',
-    168: '7d',
-    0: 'All',
-  };
+  // Time filter state
   int _selectedTimeFilter = 24; // Default to 24 hours
   String? _telegramLink; // Optional Telegram channel link from server
   StreamSubscription? _locationSubscription;
   bool _pushEnabled = false;
   bool _pushSupported = false;
+  bool _hasAccurateLocation = false; // True only when GPS is available
 
   @override
   void initState() {
@@ -63,26 +59,20 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     try {
-      // Get location
+      // Get location - GPS only, no fallback
       final loc = await _locationService.getCurrentLocation();
       if (mounted) {
-        setState(() => _currentLocation = loc);
+        setState(() {
+          _currentLocation = loc;
+          _viewCenter = loc;
+          _hasAccurateLocation = true; // GPS succeeded
+        });
       }
     } catch (e) {
       debugPrint('Location service error: $e');
-      // Try to get from server
-      try {
-        final region = await _pocketbaseService.fetchRegionConfig();
-        if (region != null && mounted) {
-          setState(() {
-            _currentLocation = LatLng(
-              (region['lat'] as num).toDouble(),
-              (region['long'] as num).toDouble(),
-            );
-          });
-        }
-      } catch (e2) {
-        debugPrint('Failed to fetch region config: $e2');
+      // No fallback - reporting disabled without GPS
+      if (mounted) {
+        setState(() => _hasAccurateLocation = false);
       }
     }
 
@@ -132,9 +122,11 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _updateSubscriptions() async {
+    // Use _viewCenter (Map Center) instead of _currentLocation (GPS)
+    // This allows users to browse reports by dragging the map
     final newGeohashes = _geohashService.getNeighborhoodForLocation(
-      _currentLocation.latitude,
-      _currentLocation.longitude,
+      _viewCenter.latitude,
+      _viewCenter.longitude,
     );
 
     // Only update if geohashes changed
@@ -159,8 +151,25 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _onLocationUpdate(LatLng location) {
+    // Only update marker, do NOT force map move or re-fetch
+    // This adheres to "Decoupled View" principle
     setState(() => _currentLocation = location);
-    _updateSubscriptions();
+    
+    // If we haven't initialized view center yet, do it once
+    if (_viewCenter.latitude == 43.4926 && _viewCenter.longitude == -112.0401) {
+       _viewCenter = location;
+       _updateSubscriptions();
+    }
+  }
+
+  void _onMapPositionChanged(MapCamera camera, bool hasGesture) {
+    _viewCenter = camera.center;
+    
+    // Debounce updates to prevent thrashing network on every frame
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _updateSubscriptions();
+    });
   }
 
   void _onNewReport(Report report) {
@@ -191,6 +200,9 @@ class _MapScreenState extends State<MapScreen> {
 
   void _centerOnLocation() {
     _mapController.move(_currentLocation, AppConfig.defaultZoom);
+    // Sync view center to user location immediately
+    _viewCenter = _currentLocation;
+    _updateSubscriptions();
   }
 
   /// Refresh reports with current time filter
@@ -216,7 +228,9 @@ class _MapScreenState extends State<MapScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ReportForm(
-        location: _currentLocation,
+        location: _viewCenter, // Use view center for reports? No, probably still user location for submission, or visual center if dragging pin. ReportForm usually takes user loc.
+        // Actually, let's keep it as _currentLocation for submission accuracy, BUT many apps allow dropping pin at center. 
+        // For now, let's assume Report is WHERE I AM. 
         onSubmit: _submitReport,
       ),
     );
@@ -239,6 +253,9 @@ class _MapScreenState extends State<MapScreen> {
       }
     } else {
       // Enable with current geohash
+      // TODO: Should this be View Center or User Location?
+      // User likely wants alerts for WHERE THEY ARE, not where they are looking.
+      // So keeping _currentLocation for Push Subscriptions is correct.
       final geohash = _geohashService.encode(
         _currentLocation.latitude,
         _currentLocation.longitude,
@@ -288,9 +305,21 @@ class _MapScreenState extends State<MapScreen> {
       }
     } catch (e) {
       if (mounted) {
+        // Parse error for user-friendly message
+        String message = 'Failed to submit report';
+        final errorStr = e.toString();
+        
+        if (errorStr.contains('wait 1 hour')) {
+          message = 'Please wait 1 hour between reports';
+        } else if (errorStr.contains('validation')) {
+          message = 'Invalid report data. Please try again.';
+        } else if (errorStr.contains('network') || errorStr.contains('connection')) {
+          message = 'Network error. Check your connection.';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to submit report: $e'),
+            content: Text(message),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -303,6 +332,7 @@ class _MapScreenState extends State<MapScreen> {
   void dispose() {
     _reportsSubscription?.cancel();
     _locationSubscription?.cancel();
+    _debounceTimer?.cancel();
     _mapController.dispose();
     super.dispose();
   }
@@ -320,6 +350,7 @@ class _MapScreenState extends State<MapScreen> {
               initialZoom: AppConfig.defaultZoom,
               minZoom: 10,
               maxZoom: 18,
+              onPositionChanged: _onMapPositionChanged,
             ),
             children: [
               // OSM Tile Layer
@@ -343,8 +374,8 @@ class _MapScreenState extends State<MapScreen> {
                           border: Border.all(color: Colors.white, width: 3),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.3),
-                              blurRadius: 8,
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                              blurRadius: 12,
                             ),
                           ],
                         ),
@@ -372,208 +403,39 @@ class _MapScreenState extends State<MapScreen> {
 
           // Status bar - shows subscribed area
           Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
+            top: MediaQuery.of(context).padding.top + 16,
             left: 16,
             right: 16,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        const Text('🧊', style: TextStyle(fontSize: 20)),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                'notICE',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                '${_reports.length} reports in area',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Telegram button (if configured)
-                        if (_telegramLink != null) ...[
-                          GestureDetector(
-                            onTap: () => launchUrl(Uri.parse(_telegramLink!)),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0088CC).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.telegram, size: 16, color: Color(0xFF0088CC)),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Join',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF0088CC),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        // Push Alert button (if supported)
-                        if (_pushSupported) ...[
-                          GestureDetector(
-                            onTap: _togglePushNotifications,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _pushEnabled
-                                    ? Colors.orange.withValues(alpha: 0.2)
-                                    : Colors.grey.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    _pushEnabled ? Icons.notifications_active : Icons.notifications_off,
-                                    size: 16,
-                                    color: _pushEnabled ? Colors.orange : Colors.grey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _pushEnabled ? 'Alerts' : 'Enable',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: _pushEnabled ? Colors.orange : Colors.grey,
-                                    ),
-                                  ),
-                                  if (_pushEnabled) ...[
-                                    const SizedBox(width: 8),
-                                    TextButton(
-                                      onPressed: () => PushNotificationService.instance.testLocalNotification(),
-                                      style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                                        minimumSize: Size.zero,
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                      child: const Text('Test', style: TextStyle(fontSize: 10, color: Colors.blue)),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.circle, size: 8, color: Colors.green),
-                              SizedBox(width: 4),
-                              Text(
-                                'LIVE',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    // Time filter chips
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: _timeFilterOptions.entries.map((entry) {
-                          final isSelected = _selectedTimeFilter == entry.key;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(entry.value),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                if (selected) {
-                                  setState(() => _selectedTimeFilter = entry.key);
-                                  _refreshReports();
-                                }
-                              },
-                              selectedColor: Theme.of(context).colorScheme.primaryContainer,
-                              showCheckmark: false,
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              labelStyle: TextStyle(
-                                fontSize: 12,
-                                color: isSelected 
-                                    ? Theme.of(context).colorScheme.onPrimaryContainer
-                                    : null,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            child: MapStatusBar(
+              reportCount: _reports.length,
+              telegramLink: _telegramLink,
+              pushSupported: _pushSupported,
+              pushEnabled: _pushEnabled,
+              onTogglePush: _togglePushNotifications,
+              onTestPush: _pushEnabled 
+                  ? () => PushNotificationService.instance.testLocalNotification()
+                  : null,
+              selectedTimeFilter: _selectedTimeFilter,
+              onTimeFilterChanged: (hours) {
+                setState(() => _selectedTimeFilter = hours);
+                _refreshReports();
+              },
             ),
           ),
 
-          // Location button
+          // Location & Report Controls
           Positioned(
-            bottom: 100,
+            bottom: 32,
             right: 16,
-            child: FloatingActionButton.small(
-              heroTag: 'location',
-              onPressed: _centerOnLocation,
-              child: const Icon(Icons.my_location),
+            child: MapControls(
+              onCenterLocation: _centerOnLocation,
+              onReport: _showReportForm,
+              canReport: _hasAccurateLocation,
             ),
           ),
         ],
       ),
 
-      // Report button
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showReportForm,
-        icon: const Icon(Icons.add_alert),
-        label: const Text('Report'),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 

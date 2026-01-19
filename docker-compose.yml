@@ -1,27 +1,31 @@
-version: "3.8"
+# notICE - Community Safety Alert System
+# Docker Compose configuration
+#
+# Quick Start:
+#   docker compose up -d
+#
+# With Cloudflare Tunnel (free HTTPS):
+#   docker compose --profile public up -d
+#
 
 services:
   # ===========================================
-  # PocketBase Server + PWA
+  # notICE Server + PWA
   # ===========================================
-  pocketbase:
-    image: ghcr.io/muchobien/pocketbase:latest
+  notice:
+    image: ghcr.io/adriancmurray/notice:latest
     container_name: notice-server
     restart: unless-stopped
     ports:
       - "${PORT:-8090}:8090"
     volumes:
-      - ./pb_data:/pb_data
-      - ./pb_hooks:/pb_hooks
-      - ./pb_public:/pb_public
-    environment:
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
-      - REGION_NAME=${REGION_NAME:-}
-      - REGION_LAT=${REGION_LAT:-}
-      - REGION_LONG=${REGION_LONG:-}
-      - REGION_ZOOM=${REGION_ZOOM:-14}
-    command: serve --http=0.0.0.0:8090
+      - notice-data:/app/pb_data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8090/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # ===========================================
   # Cloudflare Tunnel (Optional)
@@ -31,8 +35,11 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: notice-tunnel
     restart: unless-stopped
-    command: tunnel --no-autoupdate --url http://pocketbase:8090
+    command: tunnel --no-autoupdate --url http://notice:8090
     depends_on:
-      - pocketbase
+      - notice
     profiles:
       - public  # Only starts with: docker compose --profile public up
+
+volumes:
+  notice-data:

@@ -1,30 +1,73 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:app/main.dart';
+import 'package:app/models/report.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('Report', () {
+    test('fromRecord creates valid Report', () {
+      // Mock a minimal record-like map for testing
+      final report = Report(
+        id: 'abc123',
+        geohash: '9xj5ns',
+        type: ReportType.danger,
+        description: 'Ice on road',
+        lat: 43.4926,
+        long: -112.0401,
+        created: DateTime.now(),
+        confirmations: 2,
+        disputes: 0,
+      );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      expect(report.id, 'abc123');
+      expect(report.type, ReportType.danger);
+      expect(report.isDisputed, false);
+      expect(report.credibilityScore, 2);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('isDisputed returns true when disputes >= 2', () {
+      final report = Report(
+        id: 'test1',
+        geohash: '9xj5ns',
+        type: ReportType.warning,
+        lat: 43.0,
+        long: -112.0,
+        created: DateTime.now(),
+        disputes: 2,
+      );
+      expect(report.isDisputed, true);
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('credibilityScore is confirmations minus disputes', () {
+      final report = Report(
+        id: 'test2',
+        geohash: '9xj5ns',
+        type: ReportType.safe,
+        lat: 43.0,
+        long: -112.0,
+        created: DateTime.now(),
+        confirmations: 5,
+        disputes: 2,
+      );
+      expect(report.credibilityScore, 3);
+    });
+  });
+
+  group('ReportType', () {
+    test('displayName returns readable strings', () {
+      expect(ReportType.danger.displayName, 'Danger');
+      expect(ReportType.warning.displayName, 'Warning');
+      expect(ReportType.safe.displayName, 'All Clear');
+    });
+
+    test('emoji returns correct emoji', () {
+      expect(ReportType.danger.emoji, '🚨');
+      expect(ReportType.warning.emoji, '⚠️');
+      expect(ReportType.safe.emoji, '✅');
+    });
+
+    test('colorValue returns valid color values', () {
+      expect(ReportType.danger.colorValue, 0xFFE53935);
+      expect(ReportType.warning.colorValue, 0xFFFFA726);
+      expect(ReportType.safe.colorValue, 0xFF66BB6A);
+    });
   });
 }
