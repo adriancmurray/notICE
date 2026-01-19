@@ -1,5 +1,7 @@
 # notICE 🧊
 
+> ⚠️ **BETA** — This project is under active development. Docker deployment and first-run onboarding are still being refined. Contributions welcome!
+
 **Privacy-first community safety alerts for immigrant communities.**
 
 A decentralized, anonymous reporting system that enables communities to share real-time safety information without surveillance risk.
